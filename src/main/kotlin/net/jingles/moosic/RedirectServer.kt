@@ -11,10 +11,14 @@ import net.jingles.moosic.service.addSpotifyClient
 
 class RedirectServer(port: Int) {
 
-  val server: Undertow = Undertow.builder()
+  private val server: Undertow = Undertow.builder()
     .addHttpListener(port, "0.0.0.0")
     .setHandler(BlockingHandler(SpotifyResponseHandler()))
     .build()
+
+  init {
+    server.start()
+  }
 
 }
 
