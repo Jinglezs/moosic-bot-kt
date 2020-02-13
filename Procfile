@@ -1,1 +1,1 @@
-web: java -jar target/moosic-bot-kt-1.0-SNAPSHOT.jar $PORT
+web: java -jar build/libs/moosic-bot-kt-1.0-SNAPSHOT.jar $PORT
