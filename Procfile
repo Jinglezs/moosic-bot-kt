@@ -1,0 +1,1 @@
+web: java -jar target/moosic-bot-kt-1.0-SNAPSHOT.jar $PORT
