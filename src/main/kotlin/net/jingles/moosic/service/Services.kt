@@ -44,7 +44,7 @@ fun getSpotifyClient(id: Long): Spotify? {
 
   if (spotifyClients.containsKey(id)) return spotifyClients[id]!!
 
-  val spotify: Spotify = transaction {
+  val spotify: Spotify? = transaction {
 
     UserInfo.select { UserInfo.id eq id }.withDistinct()
       .limit(1)
@@ -56,11 +56,12 @@ fun getSpotifyClient(id: Long): Spotify? {
 
         Spotify(clientAPI)
 
-      }.first()
+      }.ifEmpty { null }
+      ?.first()
 
   }
 
-  spotifyClients[id] = spotify
+  if (spotify != null) spotifyClients[id] = spotify
   return spotify
 
 }
@@ -76,6 +77,7 @@ fun addSpotifyClient(id: Long, spotify: Spotify) {
     suspendedTransactionAsync {
       UserInfo.insert { it[this.refreshToken] = refreshToken }
     }
+
   }
 
 }

@@ -6,6 +6,7 @@ import com.adamratzman.spotify.SpotifyCredentials
 import net.dv8tion.jda.api.AccountType
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.hooks.AnnotatedEventManager
+import net.jingles.moosic.command.CommandManager
 import javax.security.auth.login.LoginException
 import kotlin.system.exitProcess
 
@@ -17,17 +18,19 @@ lateinit var spotify: SpotifyAppAPI
 
 class MoosicBot {
 
-  fun main() {
-    connect(System.getenv("discord_token"))
+  fun main(args: Array<String>) {
+    connect(System.getenv("discord_token"), args[0].toInt())
   }
 
-  private fun connect(token: String) {
+  private fun connect(token: String, port: Int) {
     try {
 
       createSpotifyAPI()
+      RedirectServer(port)
 
       JDABuilder(AccountType.BOT)
         .setEventManager(AnnotatedEventManager())
+        .addEventListeners(CommandManager())
         .setBulkDeleteSplittingEnabled(false)
         .setToken(token)
         .build()

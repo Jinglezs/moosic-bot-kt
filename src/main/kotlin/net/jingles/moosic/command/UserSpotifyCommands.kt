@@ -1,8 +1,11 @@
 package net.jingles.moosic.command
 
 import com.adamratzman.spotify.endpoints.client.ClientPersonalizationAPI
+import net.dv8tion.jda.api.EmbedBuilder
+import net.jingles.moosic.SPOTIFY_ICON
 import net.jingles.moosic.service.Spotify
 import net.jingles.moosic.service.getSpotifyClient
+import java.awt.Color
 
 @CommandMeta(
   category = Category.SPOTIFY, triggers = ["favorite", "favourite"], minArgs = 4,
@@ -10,7 +13,7 @@ import net.jingles.moosic.service.getSpotifyClient
 )
 class FavoritesCommand : Command() {
 
-  override fun execute(context: CommandContext) {
+  override suspend fun execute(context: CommandContext) {
 
     val type = context.arguments.pollFirst().toLowerCase()
 
@@ -23,33 +26,34 @@ class FavoritesCommand : Command() {
 
     val genre = context.arguments.pollFirst().toLowerCase()
     val name = context.arguments.joinToString { " " }
-    val user = context.jda.getUsersByName(name, true).first()
 
-    if (user == null) {
-      this.error(context, "A user by the name of \"$name\" could not be found.")
-      return
-    }
+    val user = context.jda.getUsersByName(name, true).first()
+      ?: throw CommandException("A user by the name of \"$name\" could not be found.")
 
     val spotify = getSpotifyClient(user.idLong)
+      ?: throw CommandException("${user.name} has not authenticated MoosicBot for Spotify interactions >:V")
 
-    if (spotify == null) {
-      this.error(context, "${user.name} has not authenticated MoosicBot for Spotify interactions >:V")
-      return
+    val mediaList = when (type) {
+      "artists" -> getArtistList(spotify, genre, timeRange)
+      "tracks" -> getTrackList(spotify, genre, timeRange)
+      else -> throw CommandException("The first argument must either be \"tracks\" or \"artists\"")
     }
 
-    val mediaList = when {
+    val embed = EmbedBuilder()
+      .setTitle("$name's Favorite ${type.capitalize()}")
+      .setDescription(mediaList)
+      .setColor(Color.BLACK)
+      .setFooter("Powered by Spotify", SPOTIFY_ICON)
+      .build()
 
-      type == "artists" -> getArtistList(spotify, genre, timeRange)
-      else -> getTrackList(spotify, genre, timeRange)
-
-      //TODO: Invalid argument error
-
-    }
+    context.message.channel.sendMessage(embed)
 
   }
 
-  private fun getArtistList(spotify: Spotify, genre: String,
-                            range: ClientPersonalizationAPI.TimeRange): String {
+  private fun getArtistList(
+    spotify: Spotify, genre: String,
+    range: ClientPersonalizationAPI.TimeRange
+  ): String {
 
     return spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 45)
       .getAllItems().complete().filter { it.genres.any { g -> g == genre } }
@@ -58,13 +62,16 @@ class FavoritesCommand : Command() {
 
   }
 
-  private fun getTrackList(spotify: Spotify, genre: String,
-                           range: ClientPersonalizationAPI.TimeRange): String {
+  private fun getTrackList(
+    spotify: Spotify, genre: String,
+    range: ClientPersonalizationAPI.TimeRange
+  ): String {
 
     return spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 45)
-      .getAllItems().complete().filter { track ->
+      .getAllItems().complete()
+      .filter { track ->
         track.artists.any { it.toFullArtist().complete()?.genres?.any { g -> g == genre } ?: false }
-      }.map { "${it.name}  -  ${it.artists.joinToString(", ") { a -> a.name}}" }
+      }.map { "${it.name}  -  ${it.artists.joinToString(", ") { a -> a.name }}" }
       .joinToString { "\n" }
 
   }

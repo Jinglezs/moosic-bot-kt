@@ -8,7 +8,6 @@ import io.undertow.server.HttpServerExchange
 import io.undertow.server.handlers.BlockingHandler
 import net.jingles.moosic.service.Spotify
 import net.jingles.moosic.service.addSpotifyClient
-import kotlin.coroutines.suspendCoroutine
 
 class RedirectServer(port: Int) {
 

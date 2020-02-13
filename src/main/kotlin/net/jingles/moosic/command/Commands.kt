@@ -1,29 +1,30 @@
 package net.jingles.moosic.command
 
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.TextChannel
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.SubscribeEvent
 import org.reflections.Reflections
 import java.util.*
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * Locates and stores all of the commands.
  */
 class CommandManager {
 
-  val commands: List<Command> = Reflections("net.jingles.command")
+  private val commands: List<Command> = Reflections("net.jingles.command")
     .getTypesAnnotatedWith(CommandMeta::class.java)
     .map { it.getConstructor().newInstance() }
     .filterIsInstance(Command::class.java)
 
   init {
 
-    val reflections: Reflections = Reflections("net.jingles.command")
+    val reflections = Reflections("net.jingles.command")
     reflections.getTypesAnnotatedWith(CommandMeta::class.java).map {
 
       val commandMeta = it.getAnnotation(CommandMeta::class.java)
@@ -48,13 +49,15 @@ class CommandManager {
     val context = CommandContext(event)
 
     if (context.arguments.size < command.meta.minArgs) {
-
       event.channel.sendMessage("Invalid arguments. Use ::help <command> for more information")
       return
-
     }
 
-    command.execute(context)
+    try {
+      command.job = GlobalScope.async { command.execute(context) }
+    } catch (exception: CommandException) {
+      context.message.channel.sendMessage(exception.message)
+    }
 
   }
 
@@ -67,18 +70,17 @@ class CommandManager {
 abstract class Command {
 
   val meta = javaClass.getAnnotation(CommandMeta::class.java)
+  var job: Deferred<Unit>? = null
 
   /**
    * Determines what happens when the command is called.
    * @param context information about the message containing the command
    */
-  abstract fun execute(context: CommandContext)
-
-  fun error(context: CommandContext, message: String) {
-    context.message.channel.sendMessage(message)
-  }
+  abstract suspend fun execute(context: CommandContext)
 
 }
+
+class CommandException(override val message: String) : RuntimeException(message)
 
 /**
  * Represents command information that remains constant throughout its lifetime.
@@ -126,7 +128,3 @@ class CommandContext(event: MessageReceivedEvent) {
 fun String.toUser(jda: JDA): User? = jda.getUserById(this)
 
 fun String.toChannel(jda: JDA): TextChannel? = jda.getTextChannelById(this)
-
-suspend fun String.toMessage(channel: MessageChannel): Message? = suspendCoroutine {
-  channel.retrieveMessageById(this).complete()
-}

@@ -9,9 +9,7 @@ import java.time.Instant
 @CommandMeta(category = Category.SPOTIFY, triggers = ["new-releases"], description = "Displays Spotify's new releases.")
 class NewReleasesCommand : Command() {
 
-  override fun execute(context: CommandContext) {
-
-    val channel = context.message.textChannel
+  override suspend fun execute(context: CommandContext) {
 
     spotify.browse.getNewReleases(market = CountryCode.US).queue {
 
@@ -27,7 +25,7 @@ class NewReleasesCommand : Command() {
         .setFooter("Powered by Spotify", "")
         .build()
 
-      channel.sendMessage(embed).queue()
+      context.message.channel.sendMessage(embed).queue()
 
     }
 

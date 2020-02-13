@@ -2,14 +2,13 @@ package net.jingles.moosic.command
 
 import com.adamratzman.spotify.SpotifyClientApiBuilder
 import com.adamratzman.spotify.SpotifyScope
-import net.dv8tion.jda.api.entities.Emote
 import net.jingles.moosic.credentials
 
 @CommandMeta(category = Category.SPOTIFY, triggers = ["authenticate"], minArgs = 0,
   description = "Messages the sender an authentication link that will allow MoosicBot to interact with their Spotify account.")
 class AuthenticateCommand : Command() {
 
-  override fun execute(context: CommandContext) {
+  override suspend fun execute(context: CommandContext) {
 
     val authorizationUrl = SpotifyClientApiBuilder(credentials).getAuthorizationUrl(
       SpotifyScope.PLAYLIST_READ_PRIVATE,
