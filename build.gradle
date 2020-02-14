@@ -38,7 +38,10 @@ jar {
     manifest{
         attributes('Main-Class': 'net.jingles.moosic.MoosicBot', 'Class-Path': configurations.runtimeClasspath.files.collect { it.getName() }.join(' '))
     }
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
 
-task stage(dependsOn: ['build', 'clean'])
-build.mustRunAfter clean
+task stage(dependsOn: ['jar', 'clean'])
+jar.mustRunAfter clean
