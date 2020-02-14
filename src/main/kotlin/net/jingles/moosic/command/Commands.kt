@@ -4,7 +4,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.TextChannel
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
@@ -53,7 +52,7 @@ object CommandManager {
     try {
       command.job = GlobalScope.async { command.execute(context) }
     } catch (exception: CommandException) {
-      context.message.channel.sendMessage(exception.message).queue()
+      context.event.channel.sendMessage(exception.message).queue()
     }
 
   }
@@ -66,7 +65,7 @@ object CommandManager {
  */
 abstract class Command {
 
-  val meta = javaClass.getAnnotation(CommandMeta::class.java)
+  val meta = javaClass.getAnnotation(CommandMeta::class.java)!!
   var job: Deferred<Unit>? = null
 
   /**
@@ -110,14 +109,9 @@ enum class Category {
 /**
  * Holds information about a message that contains a command.
  */
-class CommandContext(event: MessageReceivedEvent) {
+class CommandContext(val event: MessageReceivedEvent) {
 
   val arguments: LinkedList<String> = LinkedList(event.message.contentStripped.split(" ").drop(1))
-  val userId: String = event.author.id
-  val channelId: String = event.channel.id
-  val message: Message = event.message
-  val jda: JDA = event.jda
-
   fun getArgCount(): Int = arguments.size
 
 }

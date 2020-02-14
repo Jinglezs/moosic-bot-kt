@@ -28,7 +28,7 @@ class FavoritesCommand : Command() {
     val genre = context.arguments.pollFirst().toLowerCase()
     val name = context.arguments.joinToString { " " }
 
-    val user = context.jda.getUsersByName(name, true).first()
+    val user = context.event.jda.getUsersByName(name, true).first()
       ?: throw CommandException("A user by the name of \"$name\" could not be found.")
 
     val spotify = getSpotifyClient(user.idLong)
@@ -47,7 +47,7 @@ class FavoritesCommand : Command() {
       .setFooter("Powered by Spotify", SPOTIFY_ICON)
       .build()
 
-    context.message.channel.sendMessage(embed).queue()
+    context.event.channel.sendMessage(embed).queue()
 
   }
 

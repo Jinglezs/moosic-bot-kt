@@ -2,6 +2,7 @@ package net.jingles.moosic.command.impl
 
 import com.neovisionaries.i18n.CountryCode
 import net.dv8tion.jda.api.EmbedBuilder
+import net.jingles.moosic.SPOTIFY_ICON
 import net.jingles.moosic.command.Category
 import net.jingles.moosic.command.Command
 import net.jingles.moosic.command.CommandContext
@@ -29,9 +30,44 @@ class NewReleasesCommand : Command() {
         .setFooter("Powered by Spotify", "")
         .build()
 
-      context.message.channel.sendMessage(embed).queue()
+      context.event.channel.sendMessage(embed).queue()
 
     }
+
+  }
+
+}
+
+@CommandMeta(
+  category = Category.SPOTIFY, triggers = ["artist"], minArgs = 1,
+  description = "Displays basic information about an artist from Spotify."
+)
+class ArtistInfoCommand : Command() {
+
+  override suspend fun execute(context: CommandContext) {
+
+    val query = context.arguments.joinToString { " " }
+    val artist = spotify.search.searchArtist(query, limit = 1).getAllItems().complete().first()
+
+    val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete().joinToString(", ") { it.name }
+
+    val info = """
+      Genres: ${artist.genres.joinToString { ", " }}
+      Follower Count: ${artist.followers.total}
+      Popularity: ${artist.popularity}
+    """.trimIndent()
+
+    val embed = EmbedBuilder()
+      .setTitle(artist.name)
+      .addField("Top Tracks", topTracks, false)
+      .addField("General Information", info, false)
+      .setImage(artist.images.firstOrNull()?.url)
+      .setColor(Color.WHITE)
+      .setTimestamp(Instant.now())
+      .setFooter("Powered by Spotify", SPOTIFY_ICON)
+      .build()
+
+    context.event.channel.sendMessage(embed).queue()
 
   }
 
