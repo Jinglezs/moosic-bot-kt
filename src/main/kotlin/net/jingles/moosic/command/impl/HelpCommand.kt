@@ -5,6 +5,8 @@ import net.jingles.moosic.command.*
 import java.awt.Color
 import java.time.Instant
 
+@CommandMeta(category = Category.GENERAL, triggers = ["help"], minArgs = 0,
+  description = "You wouldn't be seeing this if you didn't know what it does.")
 class HelpCommand : Command() {
 
   override suspend fun execute(context: CommandContext) {

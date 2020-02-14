@@ -33,13 +33,13 @@ object CommandManager {
 
     if (!rawContent.startsWith("::")) return
 
-    val trigger = rawContent.split(" ")[0]
+    val trigger = rawContent.removePrefix("::").split(" ")[0]
     val command = commands.find { it.meta.triggers.any { trig -> trig == trigger } } ?: return
 
     val context = CommandContext(event)
 
     if (context.arguments.size < command.meta.minArgs) {
-      event.channel.sendMessage("Invalid arguments. Use ::help <command> for more information")
+      event.channel.sendMessage("Invalid arguments. Use ::help <category> for more information")
       return
     }
 
