@@ -28,7 +28,7 @@ class AuthenticateCommand : Command() {
     context.message.addReaction("\uD83D\uDC4D").queue()
 
     context.userId.toUser(context.jda)?.openPrivateChannel()?.queue { channel ->
-      channel.sendMessage("Click the following link to authenticate MoosicBot for Spotify interactions: $authorizationUrl")
+      channel.sendMessage("Click the following link to authenticate MoosicBot for Spotify interactions: $authorizationUrl").queue()
     }
 
   }

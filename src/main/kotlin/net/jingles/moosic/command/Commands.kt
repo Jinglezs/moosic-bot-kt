@@ -29,22 +29,27 @@ object CommandManager {
   @SubscribeEvent
   fun onCommandSend(event: MessageReceivedEvent) {
 
-    println("Message received!")
-
     val rawContent = event.message.contentRaw.toLowerCase()
 
+    // Ignore messages that do not start with ::
     if (!rawContent.startsWith("::")) return
 
+    // Remove the prefix and split by spaces
     val trigger = rawContent.removePrefix("::").split(" ")[0]
+
+    // Find a command with a matching trigger
     val command = commands.find { it.meta.triggers.any { trig -> trig == trigger } } ?: return
 
+    // Create context based on the event
     val context = CommandContext(event)
 
+    // Terminate early if the arguments are guaranteed to fail
     if (context.arguments.size < command.meta.minArgs) {
       event.channel.sendMessage("Invalid arguments. Use ::help <category> for more information").queue()
       return
     }
 
+    // Asynchronously execute the command logic
     try {
       command.job = GlobalScope.async { command.execute(context) }
     } catch (exception: CommandException) {
