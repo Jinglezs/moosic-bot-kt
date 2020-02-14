@@ -16,36 +16,44 @@ const val SPOTIFY_ICON = "https://developer.spotify.com/assets/branding-guidelin
 lateinit var credentials: SpotifyCredentials
 lateinit var spotify: SpotifyAppAPI
 
-fun main(args: Array<String>) {
-  connect(System.getenv("discord_token"), args[0].toInt())
-}
+open class MoosicBot {
 
-fun connect(token: String, port: Int) {
-  try {
+  companion object {
 
-    createSpotifyAPI()
-    RedirectServer(port)
+    @JvmStatic fun main(args: Array<String>) {
+      connect(System.getenv("discord_token"), args[0].toInt())
+    }
 
-    JDABuilder(AccountType.BOT)
-      .setEventManager(AnnotatedEventManager())
-      .addEventListeners(CommandManager())
-      .setBulkDeleteSplittingEnabled(false)
-      .setToken(token)
-      .build()
+    private fun connect(token: String, port: Int) {
+      try {
 
-  } catch (ex: LoginException) {
-    System.err.println(ex.message)
-    exitProcess(ExitStatus.INVALID_TOKEN.code)
+        createSpotifyAPI()
+        RedirectServer(port)
+
+        JDABuilder(AccountType.BOT)
+          .setEventManager(AnnotatedEventManager())
+          .addEventListeners(CommandManager())
+          .setBulkDeleteSplittingEnabled(false)
+          .setToken(token)
+          .build()
+
+      } catch (ex: LoginException) {
+        System.err.println(ex.message)
+        exitProcess(ExitStatus.INVALID_TOKEN.code)
+      }
+    }
+
+    private fun createSpotifyAPI() {
+
+      val token = System.getenv("spotify_token")
+      val secret = System.getenv("spotify_secret")
+
+      credentials = SpotifyCredentials(token, secret, "http://moosic-bot-kt.herokuapp.com")
+      spotify = SpotifyAppApiBuilder(credentials).buildPublic() as SpotifyAppAPI
+
+    }
+
   }
-}
-
-private fun createSpotifyAPI() {
-
-  val token = System.getenv("spotify_token")
-  val secret = System.getenv("spotify_secret")
-
-  credentials = SpotifyCredentials(token, secret, "http://moosic-bot-kt.herokuapp.com")
-  spotify = SpotifyAppApiBuilder(credentials).buildPublic() as SpotifyAppAPI
 
 }
 
