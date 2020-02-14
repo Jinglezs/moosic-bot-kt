@@ -3,10 +3,7 @@ package net.jingles.moosic.command.impl
 import com.neovisionaries.i18n.CountryCode
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.SPOTIFY_ICON
-import net.jingles.moosic.command.Category
-import net.jingles.moosic.command.Command
-import net.jingles.moosic.command.CommandContext
-import net.jingles.moosic.command.CommandMeta
+import net.jingles.moosic.command.*
 import net.jingles.moosic.spotify
 import java.awt.Color
 import java.time.Instant
@@ -46,10 +43,12 @@ class ArtistInfoCommand : Command() {
 
   override suspend fun execute(context: CommandContext) {
 
-    val query = context.arguments.joinToString { " " }
-    val artist = spotify.search.searchArtist(query).complete()[0]
+    val query = context.arguments.joinToString { "%20" }
 
-    val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete().joinToString(", ") { it.name }
+    val artist = spotify.artists.getArtist(spotify.search.searchArtist(query).complete()[0].id).complete()
+      ?: throw CommandException("An artist with that name could not be found.")
+
+    val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete().joinToString { ", " }
 
     val info = """
       Genres: ${artist.genres.joinToString { ", " }}

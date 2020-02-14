@@ -58,7 +58,7 @@ class FavoritesCommand : Command() {
     range: ClientPersonalizationAPI.TimeRange
   ): String {
 
-    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 45)
+    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range)
       .complete().filter { it.genres.any { g -> genre == "all" || g == genre } }
 
     return if (artists.isEmpty()) "None of the user's favorites match the given genre."
@@ -71,7 +71,7 @@ class FavoritesCommand : Command() {
     range: ClientPersonalizationAPI.TimeRange
   ): String {
 
-    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 45)
+    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range)
       .complete()
       .filter { track ->
         track.artists.any { it.toFullArtist().complete()?.genres?.any { g -> genre == "all" || g == genre } ?: false }
