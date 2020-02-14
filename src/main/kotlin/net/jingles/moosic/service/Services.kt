@@ -4,12 +4,10 @@ import com.adamratzman.spotify.SpotifyClientAPI
 import com.adamratzman.spotify.SpotifyClientApiBuilder
 import com.adamratzman.spotify.SpotifyUserAuthorizationBuilder
 import com.adamratzman.spotify.getCredentialedToken
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import net.jingles.moosic.credentials
 import net.jingles.moosic.spotify
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.experimental.suspendedTransactionAsync
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.net.URI
 
@@ -30,7 +28,7 @@ object UserDatabase {
 
     database = Database.Companion.connect(url, driver = "com.mysql.jdbc.Driver", user = username, password = password)
 
-    transaction {
+    transaction(database) {
       SchemaUtils.create(UserInfo)
     }
 
@@ -42,20 +40,22 @@ fun getSpotifyClient(id: Long): Spotify? {
 
   if (spotifyClients.containsKey(id)) return spotifyClients[id]!!
 
-  val spotify: Spotify? = transaction {
+  val spotify: Spotify? = runBlocking {
+    transaction {
 
-    UserInfo.select { UserInfo.id eq id }.withDistinct()
-      .limit(1)
-      .map {
+      UserInfo.select { UserInfo.id eq id }.withDistinct()
+        .limit(1)
+        .map {
 
-        val token = getCredentialedToken(spotify.clientId, spotify.clientSecret, spotify)
-        val authorization = SpotifyUserAuthorizationBuilder(token = token).build()
-        val clientAPI = SpotifyClientApiBuilder(credentials, authorization).build()
+          val token = getCredentialedToken(spotify.clientId, spotify.clientSecret, spotify)
+          val authorization = SpotifyUserAuthorizationBuilder(token = token).build()
+          val clientAPI = SpotifyClientApiBuilder(credentials, authorization).build()
 
-        Spotify(clientAPI)
+          Spotify(clientAPI)
 
-      }.firstOrNull()
+        }.firstOrNull()
 
+    }
   }
 
   if (spotify != null) spotifyClients[id] = spotify
@@ -63,18 +63,15 @@ fun getSpotifyClient(id: Long): Spotify? {
 
 }
 
+
 fun addSpotifyClient(id: Long, spotify: Spotify) {
 
   spotifyClients[id] = spotify;
 
   val refreshToken = spotify.clientAPI.token.refreshToken!!
 
-  GlobalScope.async {
-
-    suspendedTransactionAsync {
-      UserInfo.insert { it[this.refreshToken] = refreshToken }
-    }
-
+  transaction {
+    UserInfo.insert { it[this.refreshToken] = refreshToken }
   }
 
 }

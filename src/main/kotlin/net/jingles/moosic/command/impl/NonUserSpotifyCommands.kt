@@ -3,6 +3,7 @@ package net.jingles.moosic.command.impl
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.SPOTIFY_ICON
 import net.jingles.moosic.command.*
+import net.jingles.moosic.format
 import net.jingles.moosic.spotify
 import java.awt.Color
 import java.time.Instant
@@ -51,8 +52,8 @@ class ArtistInfoCommand : Command() {
      */
 
     val info = """
-      Genres: ${artist.genres.joinToString { ", " }}
-      Follower Count: ${artist.followers.total}
+      Genres: ${artist.genres.joinToString()}
+      Follower Count: ${artist.followers.total.format()}
       Popularity: ${artist.popularity}
     """.trimIndent()
 
