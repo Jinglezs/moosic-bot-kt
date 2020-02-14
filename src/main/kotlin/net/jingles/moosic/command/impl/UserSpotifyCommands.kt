@@ -1,6 +1,8 @@
 package net.jingles.moosic.command.impl
 
 import com.adamratzman.spotify.endpoints.client.ClientPersonalizationAPI
+import com.adamratzman.spotify.models.Artist
+import com.adamratzman.spotify.models.Track
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.SPOTIFY_ICON
 import net.jingles.moosic.command.*
@@ -56,10 +58,11 @@ class FavoritesCommand : Command() {
     range: ClientPersonalizationAPI.TimeRange
   ): String {
 
-    return spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 45)
+    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 45)
       .complete().filter { it.genres.any { g -> genre == "all" || g == genre } }
-      .map { it.name }
-      .joinToString { "\n" }
+
+    return if (artists.isEmpty()) "None of the user's favorites match the given genre."
+    else artists.map { it.name }.joinToString { "\n" }
 
   }
 
@@ -68,11 +71,14 @@ class FavoritesCommand : Command() {
     range: ClientPersonalizationAPI.TimeRange
   ): String {
 
-    return spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 45)
+    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 45)
       .complete()
       .filter { track ->
         track.artists.any { it.toFullArtist().complete()?.genres?.any { g -> genre == "all" || g == genre } ?: false }
-      }.map { "${it.name}  -  ${it.artists.joinToString(", ") { a -> a.name }}" }
+      }
+
+    return if (tracks.isEmpty()) "None of the user's favorites match the given genre."
+      else tracks.map { "${it.name}  -  ${it.artists.joinToString(", ") { a -> a.name }}" }
       .joinToString { "\n" }
 
   }

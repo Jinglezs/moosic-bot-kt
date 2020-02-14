@@ -18,7 +18,7 @@ class NewReleasesCommand : Command() {
 
     spotify.browse.getNewReleases(market = CountryCode.US).queue {
 
-      val description = it.getAllItems().complete().joinToString { album ->
+      val description = it.joinToString { album ->
         "*$album.name  - ${album.artists.joinToString(separator = ", ") { artist -> artist.name }}"
       }
 
@@ -47,7 +47,7 @@ class ArtistInfoCommand : Command() {
   override suspend fun execute(context: CommandContext) {
 
     val query = context.arguments.joinToString { " " }
-    val artist = spotify.search.searchArtist(query, limit = 1).complete()[0]
+    val artist = spotify.search.searchArtist(query).complete()[0]
 
     val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete().joinToString(", ") { it.name }
 
