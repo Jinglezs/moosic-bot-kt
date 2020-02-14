@@ -1,8 +1,8 @@
 package net.jingles.moosic.command
 
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.TextChannel
 import net.dv8tion.jda.api.entities.User
@@ -49,10 +49,14 @@ object CommandManager {
     }
 
     // Asynchronously execute the command logic
-    try {
-      command.job = GlobalScope.async { command.execute(context) }
-    } catch (exception: CommandException) {
-      context.event.channel.sendMessage(exception.message).queue()
+    command.job = GlobalScope.launch {
+
+      try {
+        command.execute(context)
+      } catch (exception: CommandException) {
+        context.event.channel.sendMessage(exception.message).queue()
+      }
+
     }
 
   }
@@ -66,7 +70,7 @@ object CommandManager {
 abstract class Command {
 
   val meta = javaClass.getAnnotation(CommandMeta::class.java)!!
-  var job: Deferred<Unit>? = null
+  var job: Job? = null
 
   /**
    * Determines what happens when the command is called.
