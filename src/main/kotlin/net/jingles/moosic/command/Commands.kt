@@ -29,6 +29,8 @@ object CommandManager {
   @SubscribeEvent
   fun onCommandSend(event: MessageReceivedEvent) {
 
+    println("Message received!")
+
     val rawContent = event.message.contentRaw.toLowerCase()
 
     if (!rawContent.startsWith("::")) return
@@ -44,7 +46,12 @@ object CommandManager {
     }
 
     try {
-      command.job = GlobalScope.async { command.execute(context) }
+      command.job = GlobalScope.async {
+
+        println("Executing command asynchronously!")
+        command.execute(context)
+
+      }
     } catch (exception: CommandException) {
       context.message.channel.sendMessage(exception.message)
     }
