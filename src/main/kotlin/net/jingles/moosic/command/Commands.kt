@@ -3,9 +3,6 @@ package net.jingles.moosic.command
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.entities.TextChannel
-import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.SubscribeEvent
 import org.reflections.Reflections
@@ -54,6 +51,11 @@ object CommandManager {
       try {
         command.execute(context)
       } catch (exception: RuntimeException) {
+
+        println("\n${exception.javaClass.simpleName}: ${exception.message}. Location: ${exception.stackTrace[0]
+          .methodName}, line ${exception.stackTrace[0].lineNumber}\n")
+
+        exception.printStackTrace(); println()
 
         val message = when (exception) {
           is CommandException -> exception.message
@@ -126,7 +128,3 @@ class CommandContext(val event: MessageReceivedEvent) {
   fun getArgCount(): Int = arguments.size
 
 }
-
-fun String.toUser(jda: JDA): User? = jda.getUserById(this)
-
-fun String.toChannel(jda: JDA): TextChannel? = jda.getTextChannelById(this)

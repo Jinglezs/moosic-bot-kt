@@ -12,8 +12,8 @@ class NewReleasesCommand : Command() {
 
   override suspend fun execute(context: CommandContext) {
 
-    val description = spotify.browse.getNewReleases().complete().joinToString {
-      "*${it.name}*   -   ${it.artists.joinToString(", ") { artist -> artist.name }}"
+    val description = spotify.browse.getNewReleases().complete().joinToString("\n") {
+      "*${it.name}*   -   ${it.artists.joinToString { artist -> artist.name }}"
     }
 
     val embed = EmbedBuilder()
@@ -38,13 +38,15 @@ class ArtistInfoCommand : Command() {
 
   override suspend fun execute(context: CommandContext) {
 
-    val query = context.arguments.joinToString { "%20" }
+    val query = context.arguments.joinToString(" ")
 
     val artist = spotify.search.searchArtist(query).complete().firstOrNull()
       ?: throw CommandException("An artist with that name could not be found.")
 
-    val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete().take(3)
-      .joinToString(", ") { it.name }
+    val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete()
+      .take(5)
+      .mapIndexed { index, track -> "$index. ${track.name}" }
+      .joinToString(separator = "\n")
 
     val info = """
       Genres: ${artist.genres.joinToString { ", " }}

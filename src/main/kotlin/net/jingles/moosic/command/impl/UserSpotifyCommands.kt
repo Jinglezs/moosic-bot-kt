@@ -27,7 +27,7 @@ class FavoritesCommand : Command() {
       else -> ClientPersonalizationAPI.TimeRange.MEDIUM_TERM
     }
 
-    val name = context.arguments.joinToString { " " }
+    val name = context.arguments.joinToString(" ")
 
     val user = context.event.jda.getUsersByName(name, true).firstOrNull()
       ?: throw CommandException("A user by the name of \"$name\" could not be found.")
@@ -57,7 +57,7 @@ class FavoritesCommand : Command() {
     val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range).complete()
 
     return if (artists.isEmpty()) "None of the user's favorites match the given genre."
-    else artists.joinToString("\n") { it.name }
+    else artists.mapIndexed { index, artist -> "$index. $artist.name" }.joinToString("\n")
 
   }
 
@@ -66,7 +66,9 @@ class FavoritesCommand : Command() {
     val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range).complete()
 
     return if (tracks.isEmpty()) "None of the user's favorites match the given genre."
-    else tracks.joinToString("\n") { "${it.name}   -   ${it.artists.joinToString(", ") { a -> a.name }}" }
+    else tracks.mapIndexed { index, track ->
+      "$index. ${track.name}   -   ${track.artists.joinToString(", ") { it.name }}"
+    }.joinToString("\n")
 
   }
 
