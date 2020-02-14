@@ -10,7 +10,6 @@ import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.transactions.experimental.suspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 
 private val spotifyClients: MutableMap<Long, Spotify> = mutableMapOf()
@@ -21,21 +20,17 @@ suspend fun getSpotifyClient(id: Long): Spotify? {
 
   val spotify: Spotify? = newSuspendedTransaction {
 
-    suspendedTransaction {
+    UserInfo.select { UserInfo.id eq id }.withDistinct()
+      .limit(1)
+      .map {
 
-      UserInfo.select { UserInfo.id eq id }.withDistinct()
-        .limit(1)
-        .map {
+        val token = getCredentialedToken(spotify.clientId, spotify.clientSecret, spotify)
+        val authorization = SpotifyUserAuthorizationBuilder(token = token).build()
+        val clientAPI = SpotifyClientApiBuilder(credentials, authorization).build()
 
-          val token = getCredentialedToken(spotify.clientId, spotify.clientSecret, spotify)
-          val authorization = SpotifyUserAuthorizationBuilder(token = token).build()
-          val clientAPI = SpotifyClientApiBuilder(credentials, authorization).build()
+        Spotify(clientAPI)
 
-          Spotify(clientAPI)
-
-        }.firstOrNull()
-
-    }
+      }.firstOrNull()
 
   }
 
@@ -51,7 +46,10 @@ fun addSpotifyClient(id: Long, spotify: Spotify) {
   val refreshToken = spotify.clientAPI.token.refreshToken!!
 
   transaction {
-    UserInfo.insert { it[this.refreshToken] = refreshToken }
+    UserInfo.insert {
+      it[this.id] = id
+      it[this.refreshToken] = refreshToken
+    }
   }
 
 }
