@@ -18,12 +18,12 @@ class FavoritesCommand : Command() {
 
     val type = context.arguments.pollFirst().toLowerCase()
 
-    val timeRange = ClientPersonalizationAPI.TimeRange.valueOf(
-      when (val range = context.arguments.pollFirst().toLowerCase()) {
-        "short", "long" -> "${range}_term"
-        else -> "medium_range"
-      }
-    )
+    val timeRange = when (context.arguments.pollFirst().toLowerCase()) {
+      "short" -> ClientPersonalizationAPI.TimeRange.SHORT_TERM
+      "medium" -> ClientPersonalizationAPI.TimeRange.MEDIUM_TERM
+      "long" -> ClientPersonalizationAPI.TimeRange.LONG_TERM
+      else -> ClientPersonalizationAPI.TimeRange.MEDIUM_TERM
+    }
 
     val genre = context.arguments.pollFirst().toLowerCase()
     val name = context.arguments.joinToString { " " }
@@ -57,7 +57,7 @@ class FavoritesCommand : Command() {
   ): String {
 
     return spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 45)
-      .getAllItems().complete().filter { it.genres.any { g -> g == genre } }
+      .complete().filter { it.genres.any { g -> genre == "all" || g == genre } }
       .map { it.name }
       .joinToString { "\n" }
 
@@ -69,9 +69,9 @@ class FavoritesCommand : Command() {
   ): String {
 
     return spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 45)
-      .getAllItems().complete()
+      .complete()
       .filter { track ->
-        track.artists.any { it.toFullArtist().complete()?.genres?.any { g -> g == genre } ?: false }
+        track.artists.any { it.toFullArtist().complete()?.genres?.any { g -> genre == "all" || g == genre } ?: false }
       }.map { "${it.name}  -  ${it.artists.joinToString(", ") { a -> a.name }}" }
       .joinToString { "\n" }
 

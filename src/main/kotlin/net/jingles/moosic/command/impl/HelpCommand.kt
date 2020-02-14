@@ -16,7 +16,13 @@ class HelpCommand : Command() {
       throw CommandException(message)
     }
 
-    val category = Category.valueOf(context.arguments.pollFirst())
+    val category = when (context.arguments.pollFirst().toLowerCase()) {
+      "general" -> Category.GENERAL
+      "spotify" -> Category.SPOTIFY
+      "party" -> Category.PARTY
+      "game" -> Category.GAME
+      else -> Category.GENERAL
+    }
 
     val description = CommandManager.commands.filter { it.meta.category == category }
       .joinToString("\n") {

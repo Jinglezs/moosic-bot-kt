@@ -47,7 +47,7 @@ class ArtistInfoCommand : Command() {
   override suspend fun execute(context: CommandContext) {
 
     val query = context.arguments.joinToString { " " }
-    val artist = spotify.search.searchArtist(query, limit = 1).getAllItems().complete().first()
+    val artist = spotify.search.searchArtist(query, limit = 1).complete()[0]
 
     val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete().joinToString(", ") { it.name }
 
