@@ -17,7 +17,9 @@ private val spotifyClients: MutableMap<Long, Spotify> = mutableMapOf()
 
 object UserDatabase {
 
-  private val database = {
+  private val database: Database
+
+  init {
 
     val jdbUri = URI(System.getenv("JAWSDB_URL"))
     val port = jdbUri.port.toString()
@@ -26,11 +28,7 @@ object UserDatabase {
     val username = jdbUri.userInfo.split(":").toTypedArray()[0]
     val password = jdbUri.userInfo.split(":").toTypedArray()[1]
 
-    Database.Companion.connect(url, driver = "com.mysql.jdbc.Driver", user = username, password = password)
-
-  }
-
-  init {
+    database = Database.Companion.connect(url, driver = "com.mysql.jdbc.Driver", user = username, password = password)
 
     transaction {
       SchemaUtils.create(UserInfo)

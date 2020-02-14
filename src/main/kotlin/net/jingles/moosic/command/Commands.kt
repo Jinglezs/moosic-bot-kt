@@ -52,8 +52,8 @@ object CommandManager {
         command.execute(context)
       } catch (exception: RuntimeException) {
 
-        println("\n${exception.javaClass.simpleName}: ${exception.message}. Location: ${exception.stackTrace[0]
-          .methodName}, line ${exception.stackTrace[0].lineNumber}\n")
+        println("\n${exception.javaClass.simpleName}: ${exception.message}\n Location: ${exception.stackTrace[0].fileName}." +
+          "${exception.stackTrace[0].methodName}(), line ${exception.stackTrace[0].lineNumber}\n")
 
         exception.printStackTrace(); println()
 

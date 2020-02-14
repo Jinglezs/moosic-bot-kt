@@ -21,7 +21,7 @@ class NewReleasesCommand : Command() {
       .setDescription(description)
       .setColor(Color.BLACK)
       .setTimestamp(Instant.now())
-      .setFooter("Powered by Spotify", "")
+      .setFooter("Powered by Spotify", SPOTIFY_ICON)
       .build()
 
     context.event.channel.sendMessage(embed).queue()
