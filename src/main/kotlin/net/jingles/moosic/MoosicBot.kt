@@ -45,8 +45,8 @@ open class MoosicBot {
 
     private fun createSpotifyAPI() {
 
-      val token = System.getenv("spotify_token")
-      val secret = System.getenv("spotify_secret")
+      val token = System.getenv("spotify_client_id")
+      val secret = System.getenv("spotify_client_secret")
 
       credentials = SpotifyCredentials(token, secret, "http://moosic-bot-kt.herokuapp.com")
       spotify = SpotifyAppApiBuilder(credentials).buildPublic() as SpotifyAppAPI
