@@ -32,7 +32,7 @@ open class MoosicBot {
 
         JDABuilder(AccountType.BOT)
           .setEventManager(AnnotatedEventManager())
-          .addEventListeners(CommandManager())
+          .addEventListeners(CommandManager)
           .setBulkDeleteSplittingEnabled(false)
           .setToken(token)
           .build()

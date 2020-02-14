@@ -1,7 +1,11 @@
-package net.jingles.moosic.command
+package net.jingles.moosic.command.impl
 
 import com.neovisionaries.i18n.CountryCode
 import net.dv8tion.jda.api.EmbedBuilder
+import net.jingles.moosic.command.Category
+import net.jingles.moosic.command.Command
+import net.jingles.moosic.command.CommandContext
+import net.jingles.moosic.command.CommandMeta
 import net.jingles.moosic.spotify
 import java.awt.Color
 import java.time.Instant

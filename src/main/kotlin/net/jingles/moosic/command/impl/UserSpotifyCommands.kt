@@ -1,8 +1,9 @@
-package net.jingles.moosic.command
+package net.jingles.moosic.command.impl
 
 import com.adamratzman.spotify.endpoints.client.ClientPersonalizationAPI
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.SPOTIFY_ICON
+import net.jingles.moosic.command.*
 import net.jingles.moosic.service.Spotify
 import net.jingles.moosic.service.getSpotifyClient
 import java.awt.Color

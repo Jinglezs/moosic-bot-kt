@@ -1,7 +1,8 @@
-package net.jingles.moosic.command
+package net.jingles.moosic.command.impl
 
 import com.adamratzman.spotify.SpotifyClientApiBuilder
 import com.adamratzman.spotify.SpotifyScope
+import net.jingles.moosic.command.*
 import net.jingles.moosic.credentials
 
 @CommandMeta(category = Category.SPOTIFY, triggers = ["authenticate"], minArgs = 0,

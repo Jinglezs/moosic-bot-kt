@@ -15,25 +15,15 @@ import java.util.*
 /**
  * Locates and stores all of the commands.
  */
-class CommandManager {
+object CommandManager {
 
-  private val commands: List<Command> = Reflections("net.jingles.command")
+  internal val commands: List<Command> = Reflections("net.jingles.moosic.command.impl")
     .getTypesAnnotatedWith(CommandMeta::class.java)
     .map { it.getConstructor().newInstance() }
     .filterIsInstance(Command::class.java)
 
   init {
-
-    val reflections = Reflections("net.jingles.command")
-    reflections.getTypesAnnotatedWith(CommandMeta::class.java).map {
-
-      val commandMeta = it.getAnnotation(CommandMeta::class.java)
-      it.getConstructor(Command::class.java).newInstance(commandMeta)
-
-    }
-
     println("Loaded ${commands.size} commands.")
-
   }
 
   @SubscribeEvent
@@ -97,15 +87,15 @@ annotation class CommandMeta(
 /**
  * Represents the type of a command / its general purpose
  */
-enum class Category(private val display: String? = null) {
+enum class Category {
 
-  PARTY("Parties"),
+  PARTY,
   GENERAL,
   SPOTIFY,
   GAME;
 
   fun getDisplayTitle(): String {
-    return display ?: name.toLowerCase().capitalize()
+    return name.toLowerCase().capitalize()
   }
 
 }
