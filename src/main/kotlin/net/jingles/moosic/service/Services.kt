@@ -17,7 +17,7 @@ private val spotifyClients: MutableMap<Long, Spotify> = mutableMapOf()
 
 object UserDatabase {
 
-  private val database by lazy {
+  private val database = {
 
     val jdbUri = URI(System.getenv("JAWSDB_URL"))
     val port = jdbUri.port.toString()
@@ -26,7 +26,7 @@ object UserDatabase {
     val username = jdbUri.userInfo.split(":").toTypedArray()[0]
     val password = jdbUri.userInfo.split(":").toTypedArray()[1]
 
-    return@lazy Database.Companion.connect(url, driver = "com.mysql.jdbc.Driver", user = username, password = password)
+    Database.Companion.connect(url, driver = "com.mysql.jdbc.Driver", user = username, password = password)
 
   }
 
@@ -56,8 +56,7 @@ fun getSpotifyClient(id: Long): Spotify? {
 
         Spotify(clientAPI)
 
-      }.ifEmpty { null }
-      ?.first()
+      }.firstOrNull()
 
   }
 

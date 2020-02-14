@@ -53,8 +53,15 @@ object CommandManager {
 
       try {
         command.execute(context)
-      } catch (exception: CommandException) {
-        context.event.channel.sendMessage(exception.message).queue()
+      } catch (exception: RuntimeException) {
+
+        val message = when (exception) {
+          is CommandException -> exception.message
+          else -> exception.localizedMessage ?: "Unknown cause."
+        }
+
+        context.event.channel.sendMessage("Error processing command: $message").queue()
+
       }
 
     }

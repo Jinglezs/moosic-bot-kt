@@ -11,7 +11,7 @@ import net.jingles.moosic.service.getSpotifyClient
 import java.awt.Color
 
 @CommandMeta(
-  category = Category.SPOTIFY, triggers = ["favorite", "favourite"], minArgs = 4,
+  category = Category.SPOTIFY, triggers = ["favorite", "favourite"], minArgs = 3,
   description = "Displays the user's top artists and songs on Spotify."
 )
 class FavoritesCommand : Command() {
@@ -27,18 +27,17 @@ class FavoritesCommand : Command() {
       else -> ClientPersonalizationAPI.TimeRange.MEDIUM_TERM
     }
 
-    val genre = context.arguments.pollFirst().toLowerCase()
     val name = context.arguments.joinToString { " " }
 
-    val user = context.event.jda.getUsersByName(name, true).first()
+    val user = context.event.jda.getUsersByName(name, true).firstOrNull()
       ?: throw CommandException("A user by the name of \"$name\" could not be found.")
 
     val spotify = getSpotifyClient(user.idLong)
       ?: throw CommandException("${user.name} has not authenticated MoosicBot for Spotify interactions >:V")
 
     val mediaList = when (type) {
-      "artists" -> getArtistList(spotify, genre, timeRange)
-      "tracks" -> getTrackList(spotify, genre, timeRange)
+      "artists" -> getArtistList(spotify, timeRange)
+      "tracks" -> getTrackList(spotify, timeRange)
       else -> throw CommandException("The first argument must either be \"tracks\" or \"artists\"")
     }
 
@@ -53,33 +52,21 @@ class FavoritesCommand : Command() {
 
   }
 
-  private fun getArtistList(
-    spotify: Spotify, genre: String,
-    range: ClientPersonalizationAPI.TimeRange
-  ): String {
+  private fun getArtistList(spotify: Spotify, range: ClientPersonalizationAPI.TimeRange): String {
 
-    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range)
-      .complete().filter { it.genres.any { g -> genre == "all" || g == genre } }
+    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range).complete()
 
     return if (artists.isEmpty()) "None of the user's favorites match the given genre."
-    else artists.map { it.name }.joinToString { "\n" }
+    else artists.joinToString("\n") { it.name }
 
   }
 
-  private fun getTrackList(
-    spotify: Spotify, genre: String,
-    range: ClientPersonalizationAPI.TimeRange
-  ): String {
+  private fun getTrackList(spotify: Spotify, range: ClientPersonalizationAPI.TimeRange): String {
 
-    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range)
-      .complete()
-      .filter { track ->
-        track.artists.any { it.toFullArtist().complete()?.genres?.any { g -> genre == "all" || g == genre } ?: false }
-      }
+    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range).complete()
 
     return if (tracks.isEmpty()) "None of the user's favorites match the given genre."
-      else tracks.map { "${it.name}  -  ${it.artists.joinToString(", ") { a -> a.name }}" }
-      .joinToString { "\n" }
+    else tracks.joinToString("\n") { "${it.name}   -   ${it.artists.joinToString(", ") { a -> a.name }}" }
 
   }
 

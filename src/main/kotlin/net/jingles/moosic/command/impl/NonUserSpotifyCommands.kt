@@ -1,6 +1,5 @@
 package net.jingles.moosic.command.impl
 
-import com.neovisionaries.i18n.CountryCode
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.SPOTIFY_ICON
 import net.jingles.moosic.command.*
@@ -13,23 +12,19 @@ class NewReleasesCommand : Command() {
 
   override suspend fun execute(context: CommandContext) {
 
-    spotify.browse.getNewReleases(market = CountryCode.US).queue {
-
-      val description = it.joinToString { album ->
-        "*$album.name  - ${album.artists.joinToString(separator = ", ") { artist -> artist.name }}"
-      }
-
-      val embed = EmbedBuilder()
-        .setTitle("New Releases on Spotify")
-        .setDescription(description)
-        .setColor(Color.BLACK)
-        .setTimestamp(Instant.now())
-        .setFooter("Powered by Spotify", "")
-        .build()
-
-      context.event.channel.sendMessage(embed).queue()
-
+    val description = spotify.browse.getNewReleases().complete().joinToString {
+      "*${it.name}*   -   ${it.artists.joinToString(", ") { artist -> artist.name }}"
     }
+
+    val embed = EmbedBuilder()
+      .setTitle("New Releases on Spotify")
+      .setDescription(description)
+      .setColor(Color.BLACK)
+      .setTimestamp(Instant.now())
+      .setFooter("Powered by Spotify", "")
+      .build()
+
+    context.event.channel.sendMessage(embed).queue()
 
   }
 
@@ -45,10 +40,11 @@ class ArtistInfoCommand : Command() {
 
     val query = context.arguments.joinToString { "%20" }
 
-    val artist = spotify.artists.getArtist(spotify.search.searchArtist(query).complete()[0].id).complete()
+    val artist = spotify.search.searchArtist(query).complete().firstOrNull()
       ?: throw CommandException("An artist with that name could not be found.")
 
-    val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete().joinToString { ", " }
+    val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete().take(3)
+      .joinToString(", ") { it.name }
 
     val info = """
       Genres: ${artist.genres.joinToString { ", " }}
