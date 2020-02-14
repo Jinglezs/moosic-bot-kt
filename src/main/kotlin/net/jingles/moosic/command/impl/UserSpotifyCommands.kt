@@ -47,7 +47,7 @@ class FavoritesCommand : Command() {
       .setFooter("Powered by Spotify", SPOTIFY_ICON)
       .build()
 
-    context.message.channel.sendMessage(embed)
+    context.message.channel.sendMessage(embed).queue()
 
   }
 

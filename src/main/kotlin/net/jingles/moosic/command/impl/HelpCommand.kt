@@ -30,7 +30,7 @@ class HelpCommand : Command() {
       .setTimestamp(Instant.now())
       .build()
 
-    context.message.channel.sendMessage(embed)
+    context.message.channel.sendMessage(embed).queue()
 
   }
 

@@ -41,19 +41,14 @@ object CommandManager {
     val context = CommandContext(event)
 
     if (context.arguments.size < command.meta.minArgs) {
-      event.channel.sendMessage("Invalid arguments. Use ::help <category> for more information")
+      event.channel.sendMessage("Invalid arguments. Use ::help <category> for more information").queue()
       return
     }
 
     try {
-      command.job = GlobalScope.async {
-
-        println("Executing command asynchronously!")
-        command.execute(context)
-
-      }
+      command.job = GlobalScope.async { command.execute(context) }
     } catch (exception: CommandException) {
-      context.message.channel.sendMessage(exception.message)
+      context.message.channel.sendMessage(exception.message).queue()
     }
 
   }
