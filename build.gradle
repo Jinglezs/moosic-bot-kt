@@ -36,12 +36,8 @@ compileTestKotlin {
 
 jar {
     manifest{
-        attributes('Main-Class': 'net.jingles.moosic.MoosicBot')
+        attributes('Main-Class': 'net.jingles.moosic.MoosicBot', 'Class-Path': configurations.runtimeClasspath.files.collect { it.getName() }.join(' '))
     }
-    // This line of code recursively collects and copies all of a project's files
-    // and adds them to the JAR itself. One can extend this task, to skip certain
-    // files or particular types at will
-    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
 }
 
 task stage(dependsOn: ['build', 'clean'])
