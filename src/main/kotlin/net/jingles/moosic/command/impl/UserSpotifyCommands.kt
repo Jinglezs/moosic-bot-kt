@@ -161,7 +161,7 @@ class SongFeaturesCommand : Command() {
       .setFooter("Powered by Spotify", SPOTIFY_ICON)
       .build()
 
-    context.event.channel.sendMessage(embed)
+    context.event.channel.sendMessage(embed).queue()
 
   }
 
@@ -182,7 +182,7 @@ class StalkCommand : Command() {
       .mapNotNull { getSpotifyClient(it.idLong)?.clientAPI }.firstOrNull()
         ?: throw CommandException("An authenticated user by that name could not be found >:V")
 
-    val limit = min(context.arguments.pollFirst().toInt(), 15)
+    val limit = if (context.getArgCount() > 1) min(context.arguments.pollFirst().toInt(), 15) else 15
 
     val embed = EmbedBuilder()
       .setTitle("$name's Play History")
