@@ -46,7 +46,7 @@ suspend fun getSpotifyClient(id: Long): Spotify? {
       accessToken = "temp",
       refreshToken = refreshToken,
       tokenType = "Bearer",
-      expiresIn = -1,
+      expiresIn = 1000,
       scopes = SCOPES.toList()
     )
 
