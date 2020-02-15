@@ -103,7 +103,8 @@ annotation class CommandMeta(
   val category: Category,
   val triggers: Array<String>,
   val description: String,
-  val minArgs: Int = 0
+  val minArgs: Int = 0,
+  val args: String = ""
 )
 
 /**

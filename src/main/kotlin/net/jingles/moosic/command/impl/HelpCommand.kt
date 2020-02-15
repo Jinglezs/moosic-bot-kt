@@ -26,7 +26,7 @@ class HelpCommand : Command() {
 
     val description = CommandManager.commands.filter { it.meta.category == category }
       .joinToString("\n") {
-        "::${it.meta.triggers[0]}   -   ${it.meta.description}"
+        "::${it.meta.triggers[0]} ${it.meta.args}  -  ${it.meta.description}"
       }
 
     val embed = EmbedBuilder()

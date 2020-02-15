@@ -8,11 +8,16 @@ import net.jingles.moosic.SPOTIFY_ICON
 import net.jingles.moosic.command.*
 import net.jingles.moosic.service.Spotify
 import net.jingles.moosic.service.getSpotifyClient
+import net.jingles.moosic.toPercent
 import java.awt.Color
+import java.time.Instant
+
+private const val NOT_AUTHENTICATED = "This command requires Spotify authentication >:V"
 
 @CommandMeta(
   category = Category.SPOTIFY, triggers = ["favorite", "favourite"], minArgs = 3,
-  description = "Displays the user's top artists and songs on Spotify."
+  description = "Displays the user's top artists and songs on Spotify.",
+  args = "<tracks or artists> <short, medium, or long> <username>"
 )
 class FavoritesCommand : Command() {
 
@@ -69,6 +74,98 @@ class FavoritesCommand : Command() {
     else tracks.mapIndexed { index, track ->
       "${index + 1}. ${track.name}  -  ${track.artists.joinToString(", ") { it.name }}"
     }.joinToString("\n")
+
+  }
+
+}
+
+@CommandMeta(
+  category = Category.SPOTIFY, triggers = ["recommend", "recommendations"],
+  description = "Provides songs similar to what you are currently playing."
+)
+class RecommendationsCommand : Command() {
+
+  override suspend fun execute(context: CommandContext) {
+
+    val spotify = getSpotifyClient(context.event.author.idLong)?.clientAPI
+      ?: throw CommandException(NOT_AUTHENTICATED)
+
+    val current = spotify.player.getCurrentlyPlaying().complete()?.track
+      ?: throw CommandException("You are not currently playing a track >:V")
+
+    val seedTracks = listOf(current.id)
+    val seedArtists = current.artists.map { it.id }
+
+    val tracks = spotify.browse.getTrackRecommendations(
+      seedTracks = seedTracks,
+      seedArtists = seedArtists,
+      limit = 10
+    ).complete().tracks.mapIndexed { index, track ->
+      "${index + 1}. ${track.name}  -  ${track.artists.joinToString { it.name }}"
+    }.joinToString("\n")
+
+    val embed = EmbedBuilder()
+      .setTitle("Recommended Tracks from ${current.name}")
+      .setDescription(tracks)
+      .setColor(Color.WHITE)
+      .setTimestamp(Instant.now())
+      .setFooter("Powered by Spotify", SPOTIFY_ICON)
+      .build()
+
+    context.event.channel.sendMessage(embed).queue()
+
+  }
+
+}
+
+@CommandMeta(
+  category = Category.SPOTIFY, triggers = ["features"],
+  description = "Displays the features of your currently playing track."
+)
+class SongFeaturesCommand : Command() {
+
+  override suspend fun execute(context: CommandContext) {
+
+    val spotify = getSpotifyClient(context.event.author.idLong)?.clientAPI
+      ?: throw CommandException(NOT_AUTHENTICATED)
+
+    val currentTrack = spotify.player.getCurrentlyPlaying().complete()?.track
+      ?: throw CommandException("You are not currently playing a track >:V")
+
+    val features = spotify.tracks.getAudioFeatures(currentTrack.id).complete()
+
+    val mainInfo = with (features) {
+      """
+        Key: $key
+        Mode: ${if (mode == 0) "Major" else "Minor"}
+        Time Signature: $timeSignature 
+        Tempo: $tempo
+      """.trimIndent()
+    }
+
+    val confidenceMeasurements = with (features) {
+      """
+        Acousticness: ${acousticness.toPercent()}
+        Danceability: ${danceability.toPercent()}
+        Energy: ${energy.toPercent()}
+        Instrumentalness: ${instrumentalness.toPercent()}
+        Liveness: ${liveness.toPercent()}
+        Loudness: ${loudness.toPercent()}
+        Speechiness: ${speechiness.toPercent()}
+        Valence: ${valence.toPercent()}
+      """.trimIndent()
+    }
+
+    val embed = EmbedBuilder()
+      .setTitle("Audio Features of ${currentTrack.name}")
+      .addField("General Info", mainInfo, false)
+      .addField("Confidence Measurements", confidenceMeasurements, false)
+      .setColor(Color.WHITE)
+      .setTimestamp(Instant.now())
+      .setFooter("Powered by Spotify", SPOTIFY_ICON)
+      .build()
+
+    context.event.channel.sendMessage(embed)
 
   }
 

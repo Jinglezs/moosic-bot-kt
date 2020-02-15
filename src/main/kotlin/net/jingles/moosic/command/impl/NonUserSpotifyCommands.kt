@@ -35,7 +35,7 @@ class NewReleasesCommand : Command() {
 
 @CommandMeta(
   category = Category.SPOTIFY, triggers = ["artist"], minArgs = 1,
-  description = "Displays basic information about an artist from Spotify."
+  args = "<artist name>", description = "Displays basic information about an artist from Spotify."
 )
 class ArtistInfoCommand : Command() {
 
