@@ -1,5 +1,7 @@
 package net.jingles.moosic.command.impl
 
+import com.adamratzman.spotify.endpoints.public.ArtistsAPI
+import com.neovisionaries.i18n.CountryCode
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.SPOTIFY_ICON
 import net.jingles.moosic.command.*
@@ -44,9 +46,13 @@ class ArtistInfoCommand : Command() {
     val artist = spotify.search.searchArtist(query).complete().firstOrNull()
       ?: throw CommandException("An artist with that name could not be found.")
 
-    val albums = spotify.artists.getArtistAlbums(artist.id, limit = 5).complete()
-      .mapIndexed { index, album -> "${index + 1}. ${album.name}" }
-      .joinToString("\n")
+    val albums = spotify.artists.getArtistAlbums(
+      artist.id, market = CountryCode.US,
+      include = *arrayOf(ArtistsAPI.AlbumInclusionStrategy.ALBUM)
+    ).complete()
+      .distinctBy { it.name }
+      .take(5)
+      .joinToString("\n") { it.name }
 
     val info = """
       Genres: ${artist.genres.joinToString()}
@@ -56,8 +62,8 @@ class ArtistInfoCommand : Command() {
 
     val embed = EmbedBuilder()
       .setTitle(artist.name)
-      .addField("General Information", info, true)
       .addField("Albums", albums, true)
+      .addField("General Info", info, true)
       .setImage(artist.images.firstOrNull()?.url)
       .setColor(Color.WHITE)
       .setTimestamp(Instant.now())
