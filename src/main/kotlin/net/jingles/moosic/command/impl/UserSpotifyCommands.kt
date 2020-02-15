@@ -4,13 +4,13 @@ import com.adamratzman.spotify.endpoints.client.ClientPersonalizationAPI
 import com.adamratzman.spotify.models.Artist
 import com.adamratzman.spotify.models.Track
 import net.dv8tion.jda.api.EmbedBuilder
-import net.jingles.moosic.SPOTIFY_ICON
+import net.jingles.moosic.*
 import net.jingles.moosic.command.*
 import net.jingles.moosic.service.Spotify
 import net.jingles.moosic.service.getSpotifyClient
-import net.jingles.moosic.toPercent
 import java.awt.Color
 import java.time.Instant
+import kotlin.math.min
 
 private const val NOT_AUTHENTICATED = "This command requires Spotify authentication >:V"
 
@@ -62,7 +62,7 @@ class FavoritesCommand : Command() {
     val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 15).complete()
 
     return if (artists.isEmpty()) "Unable to find favorite artists."
-    else artists.mapIndexed { index, artist -> "${index + 1}. ${artist.name}" }.joinToString("\n")
+    else artists.toNumberedArtists()
 
   }
 
@@ -71,9 +71,7 @@ class FavoritesCommand : Command() {
     val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 15).complete()
 
     return if (tracks.isEmpty()) "Unable to find favorite tracks."
-    else tracks.mapIndexed { index, track ->
-      "${index + 1}. ${track.name}  -  ${track.artists.joinToString(", ") { it.name }}"
-    }.joinToString("\n")
+    else tracks.toSimpleNumberedTrackInfo()
 
   }
 
@@ -90,7 +88,7 @@ class RecommendationsCommand : Command() {
     val spotify = getSpotifyClient(context.event.author.idLong)?.clientAPI
       ?: throw CommandException(NOT_AUTHENTICATED)
 
-    val current = spotify.player.getCurrentContext().complete()?.track
+    val current = spotify.player.getCurrentlyPlaying().complete()?.track
       ?: throw CommandException("You are not currently playing a track >:V")
 
     val seedTracks = listOf(current.id)
@@ -100,9 +98,7 @@ class RecommendationsCommand : Command() {
       seedTracks = seedTracks,
       seedArtists = seedArtists,
       limit = 10
-    ).complete().tracks.mapIndexed { index, track ->
-      "${index + 1}. ${track.name}  -  ${track.artists.joinToString { it.name }}"
-    }.joinToString("\n")
+    ).complete().tracks.toNumberedTrackInfo()
 
     val embed = EmbedBuilder()
       .setTitle("Recommended Tracks from ${current.name}")
@@ -129,7 +125,7 @@ class SongFeaturesCommand : Command() {
     val spotify = getSpotifyClient(context.event.author.idLong)?.clientAPI
       ?: throw CommandException(NOT_AUTHENTICATED)
 
-    val currentTrack = spotify.player.getCurrentContext().complete()?.track
+    val currentTrack = spotify.player.getCurrentlyPlaying().complete()?.track
       ?: throw CommandException("You are not currently playing a track >:V")
 
     val features = spotify.tracks.getAudioFeatures(currentTrack.id).complete()
@@ -166,6 +162,48 @@ class SongFeaturesCommand : Command() {
       .build()
 
     context.event.channel.sendMessage(embed)
+
+  }
+
+}
+
+@CommandMeta(
+  category = Category.SPOTIFY, triggers = ["play-history", "history", "stalk"],
+  description = "Displays the tracks the provided user has recently played.",
+  minArgs = 1, args = "<user> <limit>"
+)
+class StalkCommand : Command() {
+
+  override suspend fun execute(context: CommandContext) {
+
+    val name = context.arguments.pollFirst()
+
+    val spotify = context.event.jda.getUsersByName(name, true)
+      .mapNotNull { getSpotifyClient(it.idLong)?.clientAPI }.firstOrNull()
+        ?: throw CommandException("An authenticated user by that name could not be found >:V")
+
+    val limit = min(context.arguments.pollFirst().toInt(), 15)
+
+    val embed = EmbedBuilder()
+      .setTitle("$name's Play History")
+      .setColor(Color.WHITE)
+      .setTimestamp(Instant.now())
+      .setFooter("Powered by Spotify", SPOTIFY_ICON)
+
+    spotify.player.getRecentlyPlayed(limit = limit).complete()
+      .map { Pair(it.track, it.playedAt.toLocalTime()) }  // Pairs the track with the time it was played
+      .sortedByDescending { it.second }                   // Puts the pairs in descending order (most recent first)
+      .groupBy { it.second.hour }                         // Groups the pairs based on the hour the track was played
+      .forEach { (_, pairs) ->                            // Places each hour block into its own field
+
+        val title = pairs.first().second.toLocalTime().toSimpleReadable()
+        val tracks = pairs.map { it.first }.asIterable().toNumberedTrackInfo()
+
+        embed.addField(title, tracks, false)
+
+      }
+
+    context.event.channel.sendMessage(embed.build()).queue()
 
   }
 

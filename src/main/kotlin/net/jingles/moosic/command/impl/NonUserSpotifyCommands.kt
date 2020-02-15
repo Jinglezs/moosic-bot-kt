@@ -7,6 +7,7 @@ import net.jingles.moosic.SPOTIFY_ICON
 import net.jingles.moosic.command.*
 import net.jingles.moosic.format
 import net.jingles.moosic.spotify
+import net.jingles.moosic.toAlbumInfo
 import java.awt.Color
 import java.time.Instant
 
@@ -15,9 +16,7 @@ class NewReleasesCommand : Command() {
 
   override suspend fun execute(context: CommandContext) {
 
-    val description = spotify.browse.getNewReleases().complete().joinToString("\n") {
-      "*${it.name}*   -   ${it.artists.joinToString { artist -> artist.name }}"
-    }
+    val description = spotify.browse.getNewReleases().complete().toAlbumInfo()
 
     val embed = EmbedBuilder()
       .setTitle("New Releases on Spotify")
