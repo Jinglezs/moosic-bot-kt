@@ -52,18 +52,20 @@ object CommandManager {
         command.execute(context)
       } catch (exception: RuntimeException) {
 
-        println("\n${exception.javaClass.simpleName}: ${exception.message}\n Location: ${exception.stackTrace[0].fileName}." +
-          "${exception.stackTrace[0].methodName}(), line ${exception.stackTrace[0].lineNumber}\n")
-
         val message = when (exception) {
           is CommandException -> exception.message
           else -> {
+
+            println("\n${exception.javaClass.simpleName}: ${exception.message}\n Location: ${exception.stackTrace[0].fileName}." +
+              "${exception.stackTrace[0].methodName}(), line ${exception.stackTrace[0].lineNumber}\n")
+
             exception.printStackTrace(); println()
             exception.localizedMessage ?: "Unknown cause."
+
           }
         }
 
-        context.event.channel.sendMessage("Error processing command: $message").queue()
+        context.event.channel.sendMessage(message).queue()
 
       }
 

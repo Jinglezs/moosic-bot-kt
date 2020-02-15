@@ -5,7 +5,6 @@ import com.adamratzman.spotify.SpotifyClientApiBuilder
 import com.adamratzman.spotify.SpotifyScope
 import com.adamratzman.spotify.SpotifyUserAuthorizationBuilder
 import com.adamratzman.spotify.models.Token
-import net.jingles.moosic.command.CommandException
 import net.jingles.moosic.credentials
 import net.jingles.moosic.spotify
 import org.jetbrains.exposed.sql.Table
@@ -42,7 +41,7 @@ suspend fun getSpotifyClient(id: Long): Spotify? {
       .limit(1)
       .withDistinct()
       .map { it[UserInfo.refreshToken] }
-      .firstOrNull() ?: throw CommandException("Could not retrieve Spotify information")
+      .firstOrNull() ?: return@newSuspendedTransaction null
 
     val authorization = SpotifyUserAuthorizationBuilder(token = getAccessToken(refreshToken)).build()
     val clientAPI = SpotifyClientApiBuilder(credentials, authorization).build()

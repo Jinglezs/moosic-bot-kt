@@ -54,18 +54,18 @@ class FavoritesCommand : Command() {
 
   private fun getArtistList(spotify: Spotify, range: ClientPersonalizationAPI.TimeRange): String {
 
-    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range).complete().take(15)
+    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 15).complete()
 
-    return if (artists.isEmpty()) "None of the user's favorites match the given genre."
+    return if (artists.isEmpty()) "Unable to find favorite artists."
     else artists.mapIndexed { index, artist -> "${index + 1}. $artist.name" }.joinToString("\n")
 
   }
 
   private fun getTrackList(spotify: Spotify, range: ClientPersonalizationAPI.TimeRange): String {
 
-    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range).complete().take(15)
+    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 15).complete()
 
-    return if (tracks.isEmpty()) "None of the user's favorites match the given genre."
+    return if (tracks.isEmpty()) "Unable to find favorite tracks."
     else tracks.mapIndexed { index, track ->
       "${index + 1}. ${track.name}  -  ${track.artists.joinToString(", ") { it.name }}"
     }.joinToString("\n")
