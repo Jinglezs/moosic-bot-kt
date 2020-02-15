@@ -90,10 +90,10 @@ class RecommendationsCommand : Command() {
     val spotify = getSpotifyClient(context.event.author.idLong)?.clientAPI
       ?: throw CommandException(NOT_AUTHENTICATED)
 
-    val current = spotify.player.getCurrentlyPlaying().complete()?.track
+    val current = spotify.player.getCurrentContext().complete()?.track
       ?: throw CommandException("You are not currently playing a track >:V")
 
-    val seedTracks = listOf(current.uri.id)
+    val seedTracks = listOf(current.id)
     val seedArtists = current.artists.map { it.id }
 
     val tracks = spotify.browse.getTrackRecommendations(
@@ -129,10 +129,10 @@ class SongFeaturesCommand : Command() {
     val spotify = getSpotifyClient(context.event.author.idLong)?.clientAPI
       ?: throw CommandException(NOT_AUTHENTICATED)
 
-    val currentTrack = spotify.player.getCurrentlyPlaying().complete()?.track
+    val currentTrack = spotify.player.getCurrentContext().complete()?.track
       ?: throw CommandException("You are not currently playing a track >:V")
 
-    val features = spotify.tracks.getAudioFeatures(currentTrack.uri.id).complete()
+    val features = spotify.tracks.getAudioFeatures(currentTrack.id).complete()
 
     val mainInfo = with (features) {
       """
