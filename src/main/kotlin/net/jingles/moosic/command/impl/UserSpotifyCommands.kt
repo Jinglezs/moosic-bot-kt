@@ -42,7 +42,7 @@ class FavoritesCommand : Command() {
     }
 
     val embed = EmbedBuilder()
-      .setTitle("$name's Favorite ${type.capitalize()}")
+      .setTitle("$name's Favorite ${type.capitalize()} - ${timeRange.name.toLowerCase().capitalize().replace("_", " ")}")
       .setDescription(mediaList)
       .setColor(Color.BLACK)
       .setFooter("Powered by Spotify", SPOTIFY_ICON)
@@ -54,20 +54,20 @@ class FavoritesCommand : Command() {
 
   private fun getArtistList(spotify: Spotify, range: ClientPersonalizationAPI.TimeRange): String {
 
-    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range).complete()
+    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range).complete().take(15)
 
     return if (artists.isEmpty()) "None of the user's favorites match the given genre."
-    else artists.mapIndexed { index, artist -> "$index. $artist.name" }.joinToString("\n")
+    else artists.mapIndexed { index, artist -> "${index + 1}. $artist.name" }.joinToString("\n")
 
   }
 
   private fun getTrackList(spotify: Spotify, range: ClientPersonalizationAPI.TimeRange): String {
 
-    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range).complete()
+    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range).complete().take(15)
 
     return if (tracks.isEmpty()) "None of the user's favorites match the given genre."
     else tracks.mapIndexed { index, track ->
-      "$index. ${track.name}   -   ${track.artists.joinToString(", ") { it.name }}"
+      "${index + 1}. ${track.name}  -  ${track.artists.joinToString(", ") { it.name }}"
     }.joinToString("\n")
 
   }

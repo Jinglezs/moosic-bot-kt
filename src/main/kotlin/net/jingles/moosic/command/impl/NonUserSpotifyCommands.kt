@@ -44,12 +44,9 @@ class ArtistInfoCommand : Command() {
     val artist = spotify.search.searchArtist(query).complete().firstOrNull()
       ?: throw CommandException("An artist with that name could not be found.")
 
-    /*
-    val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete()
-      .take(5)
-      .mapIndexed { index, track -> "$index. ${track.name}" }
-      .joinToString(separator = "\n")
-     */
+    val albums = spotify.artists.getArtistAlbums(artist.id, limit = 5).complete()
+      .mapIndexed { index, album -> "${index + 1}. ${album.name}" }
+      .joinToString("\n")
 
     val info = """
       Genres: ${artist.genres.joinToString()}
@@ -59,8 +56,8 @@ class ArtistInfoCommand : Command() {
 
     val embed = EmbedBuilder()
       .setTitle(artist.name)
-      //.addField("Top Tracks", topTracks, false)
-      .addField("General Information", info, false)
+      .addField("General Information", info, true)
+      .addField("Albums", albums, true)
       .setImage(artist.images.firstOrNull()?.url)
       .setColor(Color.WHITE)
       .setTimestamp(Instant.now())

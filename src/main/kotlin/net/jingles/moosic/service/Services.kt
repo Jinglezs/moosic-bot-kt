@@ -7,6 +7,7 @@ import com.adamratzman.spotify.getCredentialedToken
 import net.jingles.moosic.credentials
 import net.jingles.moosic.spotify
 import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -50,6 +51,16 @@ fun addSpotifyClient(id: Long, spotify: Spotify) {
       it[this.id] = id
       it[this.refreshToken] = refreshToken
     }
+  }
+
+}
+
+fun removeSpotifyClient(id: Long) {
+
+  spotifyClients.remove(id)
+
+  transaction {
+    UserInfo.deleteWhere { UserInfo.id eq id }
   }
 
 }
