@@ -1,6 +1,6 @@
 package net.jingles.moosic
 
-import com.adamratzman.spotify.SpotifyAppAPI
+import com.adamratzman.spotify.SpotifyAppApi
 import com.adamratzman.spotify.SpotifyAppApiBuilder
 import com.adamratzman.spotify.SpotifyCredentials
 import net.dv8tion.jda.api.AccountType
@@ -13,13 +13,12 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.net.URI
 import javax.security.auth.login.LoginException
-import kotlin.system.exitProcess
 
 
 const val SPOTIFY_ICON = "https://developer.spotify.com/assets/branding-guidelines/icon2@2x.png"
 
 lateinit var credentials: SpotifyCredentials
-lateinit var spotify: SpotifyAppAPI
+lateinit var spotify: SpotifyAppApi
 
 open class MoosicBot {
 
@@ -45,7 +44,6 @@ open class MoosicBot {
 
       } catch (ex: LoginException) {
         System.err.println(ex.message)
-        exitProcess(ExitStatus.INVALID_TOKEN.code)
       }
     }
 
@@ -55,7 +53,7 @@ open class MoosicBot {
       val secret = System.getenv("spotify_client_secret")
 
       credentials = SpotifyCredentials(token, secret, "http://moosic-bot-kt.herokuapp.com")
-      spotify = SpotifyAppApiBuilder(credentials).buildPublic() as SpotifyAppAPI
+      spotify = SpotifyAppApiBuilder(credentials).build()
 
     }
 
@@ -78,23 +76,4 @@ open class MoosicBot {
 
   }
 
-}
-
-enum class ExitStatus(val code: Int) {
-  // Non error
-  UPDATE(10),
-  SHUTDOWN(11),
-  RESTART(12),
-  NEW_CONFIG(13),
-
-  // Error
-  INVALID_TOKEN(20),
-  CONFIG_MISSING(21),
-  INSUFFICIENT_ARGS(22),
-
-  // SQL
-  SQL_ACCESS_DENIED(30),
-  SQL_INVALID_PASSWORD(31),
-  SQL_UNKNOWN_HOST(32),
-  SQL_UNKNOWN_DATABASE(33)
 }
