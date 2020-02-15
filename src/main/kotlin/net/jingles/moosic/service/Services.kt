@@ -7,12 +7,14 @@ import com.adamratzman.spotify.SpotifyUserAuthorizationBuilder
 import com.adamratzman.spotify.models.Token
 import net.jingles.moosic.command.CommandException
 import net.jingles.moosic.credentials
+import net.jingles.moosic.spotify
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.*
 
 internal val SCOPES = arrayOf(
   SpotifyScope.PLAYLIST_READ_PRIVATE,
@@ -42,15 +44,7 @@ suspend fun getSpotifyClient(id: Long): Spotify? {
       .map { it[UserInfo.refreshToken] }
       .firstOrNull() ?: throw CommandException("Could not retrieve Spotify information")
 
-    val token = Token(
-      accessToken = "temp",
-      refreshToken = refreshToken,
-      tokenType = "Bearer",
-      expiresIn = 1000,
-      scopes = SCOPES.toList()
-    )
-
-    val authorization = SpotifyUserAuthorizationBuilder(token = token).build()
+    val authorization = SpotifyUserAuthorizationBuilder(token = getAccessToken(refreshToken)).build()
     val clientAPI = SpotifyClientApiBuilder(credentials, authorization).build()
 
     Spotify(clientAPI)
@@ -59,6 +53,28 @@ suspend fun getSpotifyClient(id: Long): Spotify? {
 
   if (spotify != null) spotifyClients[id] = spotify
   return spotify
+
+}
+
+private fun getAccessToken(refreshToken: String): Token {
+
+  val encoded = String(Base64.getEncoder().encode("${spotify.clientId}:${spotify.clientSecret}".toByteArray()))
+
+  val response = khttp.post(
+    url = "https://accounts.spotify.com/api/token",
+    headers = mapOf("Authorization" to "Basic $encoded"),
+    data = mapOf("grant_type" to "refresh_token", "refresh_token" to refreshToken)
+  )
+
+  val obj = response.jsonObject
+
+  return Token(
+    accessToken = obj.getString("access_token"),
+    refreshToken = refreshToken,
+    tokenType = "Bearer",
+    expiresIn = obj.getInt("expires_in"),
+    scopes = SCOPES.toList()
+  )
 
 }
 
