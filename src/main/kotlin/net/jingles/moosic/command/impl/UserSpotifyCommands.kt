@@ -93,7 +93,7 @@ class RecommendationsCommand : Command() {
     val current = spotify.player.getCurrentlyPlaying().complete()?.track
       ?: throw CommandException("You are not currently playing a track >:V")
 
-    val seedTracks = listOf(current.id)
+    val seedTracks = listOf(current.uri.id)
     val seedArtists = current.artists.map { it.id }
 
     val tracks = spotify.browse.getTrackRecommendations(
@@ -132,7 +132,7 @@ class SongFeaturesCommand : Command() {
     val currentTrack = spotify.player.getCurrentlyPlaying().complete()?.track
       ?: throw CommandException("You are not currently playing a track >:V")
 
-    val features = spotify.tracks.getAudioFeatures(currentTrack.id).complete()
+    val features = spotify.tracks.getAudioFeatures(currentTrack.uri.id).complete()
 
     val mainInfo = with (features) {
       """
