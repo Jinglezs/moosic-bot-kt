@@ -67,13 +67,8 @@ private fun getAccessToken(refreshToken: String): Token {
 
   val obj = response.jsonObject
 
-  return Token(
-    accessToken = obj.getString("access_token"),
-    refreshToken = refreshToken,
-    tokenType = "Bearer",
-    expiresIn = obj.getInt("expires_in"),
-    scopes = SCOPES.toList()
-  )
+  return Token.from(obj.getString("access_token"), refreshToken,
+    SCOPES.toList(), obj.getInt("expires_in"))
 
 }
 

@@ -1,6 +1,6 @@
 package net.jingles.moosic.command.impl
 
-import com.adamratzman.spotify.endpoints.client.ClientPersonalizationAPI
+import com.adamratzman.spotify.endpoints.client.ClientPersonalizationApi
 import com.adamratzman.spotify.models.Artist
 import com.adamratzman.spotify.models.Track
 import net.dv8tion.jda.api.EmbedBuilder
@@ -26,10 +26,10 @@ class FavoritesCommand : Command() {
     val type = context.arguments.pollFirst().toLowerCase()
 
     val timeRange = when (context.arguments.pollFirst().toLowerCase()) {
-      "short" -> ClientPersonalizationAPI.TimeRange.SHORT_TERM
-      "medium" -> ClientPersonalizationAPI.TimeRange.MEDIUM_TERM
-      "long" -> ClientPersonalizationAPI.TimeRange.LONG_TERM
-      else -> ClientPersonalizationAPI.TimeRange.MEDIUM_TERM
+      "short" -> ClientPersonalizationApi.TimeRange.SHORT_TERM
+      "medium" -> ClientPersonalizationApi.TimeRange.MEDIUM_TERM
+      "long" -> ClientPersonalizationApi.TimeRange.LONG_TERM
+      else -> ClientPersonalizationApi.TimeRange.MEDIUM_TERM
     }
 
     val name = context.arguments.joinToString(" ")
@@ -57,7 +57,7 @@ class FavoritesCommand : Command() {
 
   }
 
-  private fun getArtistList(spotify: Spotify, range: ClientPersonalizationAPI.TimeRange): String {
+  private fun getArtistList(spotify: Spotify, range: ClientPersonalizationApi.TimeRange): String {
 
     val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 15).complete()
 
@@ -66,7 +66,7 @@ class FavoritesCommand : Command() {
 
   }
 
-  private fun getTrackList(spotify: Spotify, range: ClientPersonalizationAPI.TimeRange): String {
+  private fun getTrackList(spotify: Spotify, range: ClientPersonalizationApi.TimeRange): String {
 
     val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 15).complete()
 
@@ -98,7 +98,7 @@ class RecommendationsCommand : Command() {
       seedTracks = seedTracks,
       seedArtists = seedArtists,
       limit = 10
-    ).complete().tracks.toNumberedTrackInfo()
+    ).complete().tracks.toSimpleNumberedTrackInfo()
 
     val embed = EmbedBuilder()
       .setTitle("Recommended Tracks from ${current.name}")

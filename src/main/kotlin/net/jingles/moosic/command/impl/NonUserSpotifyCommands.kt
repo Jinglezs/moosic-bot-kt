@@ -1,7 +1,7 @@
 package net.jingles.moosic.command.impl
 
-import com.adamratzman.spotify.endpoints.public.ArtistsAPI
-import com.neovisionaries.i18n.CountryCode
+import com.adamratzman.spotify.endpoints.public.ArtistApi
+import com.adamratzman.spotify.utils.Market
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.SPOTIFY_ICON
 import net.jingles.moosic.command.*
@@ -46,8 +46,8 @@ class ArtistInfoCommand : Command() {
       ?: throw CommandException("An artist with that name could not be found.")
 
     val albums = spotify.artists.getArtistAlbums(
-      artist.id, market = CountryCode.US,
-      include = *arrayOf(ArtistsAPI.AlbumInclusionStrategy.ALBUM)
+      artist.id, market = Market.US,
+      include = *arrayOf(ArtistApi.AlbumInclusionStrategy.ALBUM)
     ).complete()
       .distinctBy { it.name }
       .take(5)
