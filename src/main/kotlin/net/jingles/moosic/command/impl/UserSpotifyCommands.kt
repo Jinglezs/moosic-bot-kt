@@ -57,7 +57,7 @@ class FavoritesCommand : Command() {
     val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 15).complete()
 
     return if (artists.isEmpty()) "Unable to find favorite artists."
-    else artists.mapIndexed { index, artist -> "${index + 1}. $artist.name" }.joinToString("\n")
+    else artists.mapIndexed { index, artist -> "${index + 1}. ${artist.name}" }.joinToString("\n")
 
   }
 
