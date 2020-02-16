@@ -128,7 +128,7 @@ enum class Category {
  */
 class CommandContext(val event: MessageReceivedEvent) {
 
-  val arguments: LinkedList<String> = LinkedList(event.message.contentStripped.split(" ").drop(1))
+  val arguments: LinkedList<String> = LinkedList(event.message.contentRaw.split(" ").drop(1))
   fun getArgCount(): Int = arguments.size
 
 }

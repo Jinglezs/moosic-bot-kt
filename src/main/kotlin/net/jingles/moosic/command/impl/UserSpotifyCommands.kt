@@ -237,6 +237,7 @@ class StalkCommand : Command() {
       .setFooter("Powered by Spotify", SPOTIFY_ICON)
 
     spotify.player.getRecentlyPlayed(limit = limit).complete()
+      .take(limit)
       .map { Pair(it.track, it.playedAt.toZonedTime()) }  // Pairs the track with the time it was played
       .sortedByDescending { it.second }                   // Puts the pairs in descending order (most recent first)
       .groupBy { it.second.hour }                         // Groups the pairs based on the hour the track was played
