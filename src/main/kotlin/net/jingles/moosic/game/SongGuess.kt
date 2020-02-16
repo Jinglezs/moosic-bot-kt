@@ -79,8 +79,8 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
 
     possibleMatches = when(type) {
       "track" -> currentTrack.name.substringBefore("( | -")
-        .split(" ").map { it.trim() }
-      else -> currentTrack.artists.map { it.name }
+        .split(" ").map { it.trim().toLowerCase() }
+      else -> currentTrack.artists.map { it.name.toLowerCase() }
     }
 
     // Spotify only accepts lists of track IDs/URIs to play
@@ -225,7 +225,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
     val spotify = players.find { it.discordId == event.author.idLong }!!
 
     // Gets a decimal that reflects the accuracy
-    val score = verifyGuess(spotify, event.message.contentStripped) ?: return
+    val score = verifyGuess(spotify, event.message.contentStripped.toLowerCase()) ?: return
 
     channel.sendMessage(
       "${event.author.name} guessed the title with ${score.accuracy.toPercent()} " +
