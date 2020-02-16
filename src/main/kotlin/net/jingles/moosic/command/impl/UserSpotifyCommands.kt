@@ -191,12 +191,12 @@ class StalkCommand : Command() {
       .setFooter("Powered by Spotify", SPOTIFY_ICON)
 
     spotify.player.getRecentlyPlayed(limit = limit).complete()
-      .map { Pair(it.track, it.playedAt.toLocalTime()) }  // Pairs the track with the time it was played
+      .map { Pair(it.track, it.playedAt.toZonedTime()) }  // Pairs the track with the time it was played
       .sortedByDescending { it.second }                   // Puts the pairs in descending order (most recent first)
       .groupBy { it.second.hour }                         // Groups the pairs based on the hour the track was played
       .forEach { (_, pairs) ->                            // Places each hour block into its own field
 
-        val title = pairs.first().second.toLocalTime().toSimpleReadable()
+        val title = pairs.first().second.toReadable()
         val tracks = pairs.map { it.first }.asIterable().toNumberedTrackInfo()
 
         embed.addField(title, tracks, false)

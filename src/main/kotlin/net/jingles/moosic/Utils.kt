@@ -2,8 +2,7 @@ package net.jingles.moosic
 
 import com.adamratzman.spotify.models.*
 import java.text.NumberFormat
-import java.time.LocalDateTime
-import java.time.LocalTime
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -15,9 +14,9 @@ fun Double.format(digits: Int) = "%,.${digits}f".format(this)
 
 fun Float.toPercent(): String = NumberFormat.getPercentInstance().format(this.toDouble())
 
-fun String.toLocalTime(): LocalDateTime = LocalDateTime.parse(this)
+fun String.toZonedTime(): ZonedDateTime = ZonedDateTime.parse(this, DateTimeFormatter.ISO_DATE_TIME)
 
-fun LocalTime.toSimpleReadable(): String = this.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))
+fun ZonedDateTime.toReadable(): String = this.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL))
 
 // Conversion from Spotify objects to readable Strings
 

@@ -39,7 +39,7 @@ class SpotifyResponseHandler : HttpHandler {
       val authorization = SpotifyUserAuthorizationBuilder(code).build()
       val clientAPI = SpotifyClientApiBuilder(credentials = credentials, authorization = authorization).build()
 
-      addSpotifyClient(discordId, Spotify(clientAPI))
+      addSpotifyClient(discordId, Spotify(clientAPI, discordId))
       "Successfully authenticated MoosicBot for Spotify interactions! YUSSSSS!"
 
     } catch (e: Exception) {

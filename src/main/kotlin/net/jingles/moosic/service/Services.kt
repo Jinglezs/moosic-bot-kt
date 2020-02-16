@@ -46,7 +46,7 @@ suspend fun getSpotifyClient(id: Long): Spotify? {
     val authorization = SpotifyUserAuthorizationBuilder(token = getAccessToken(refreshToken)).build()
     val clientAPI = SpotifyClientApiBuilder(credentials, authorization).build()
 
-    Spotify(clientAPI)
+    Spotify(clientAPI, id)
 
   }
 
@@ -97,7 +97,7 @@ fun removeSpotifyClient(id: Long) {
 
 }
 
-data class Spotify(val clientAPI: SpotifyClientAPI)
+data class Spotify(val clientAPI: SpotifyClientAPI, val discordId: Long)
 
 object UserInfo : Table() {
   val id = long("discord_id")
