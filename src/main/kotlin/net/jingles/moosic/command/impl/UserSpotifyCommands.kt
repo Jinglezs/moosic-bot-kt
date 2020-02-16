@@ -6,7 +6,7 @@ import com.adamratzman.spotify.models.Track
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.*
 import net.jingles.moosic.command.*
-import net.jingles.moosic.service.Spotify
+import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
 import java.awt.Color
 import java.time.Instant
@@ -57,7 +57,7 @@ class FavoritesCommand : Command() {
 
   }
 
-  private fun getArtistList(spotify: Spotify, range: ClientPersonalizationApi.TimeRange): String {
+  private fun getArtistList(spotify: SpotifyClient, range: ClientPersonalizationApi.TimeRange): String {
 
     val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 15).complete()
 
@@ -66,7 +66,7 @@ class FavoritesCommand : Command() {
 
   }
 
-  private fun getTrackList(spotify: Spotify, range: ClientPersonalizationApi.TimeRange): String {
+  private fun getTrackList(spotify: SpotifyClient, range: ClientPersonalizationApi.TimeRange): String {
 
     val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 15).complete()
 

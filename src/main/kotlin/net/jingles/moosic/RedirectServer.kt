@@ -6,7 +6,7 @@ import io.undertow.Undertow
 import io.undertow.server.HttpHandler
 import io.undertow.server.HttpServerExchange
 import io.undertow.server.handlers.BlockingHandler
-import net.jingles.moosic.service.Spotify
+import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.addSpotifyClient
 
 class RedirectServer(port: Int) {
@@ -39,7 +39,7 @@ class SpotifyResponseHandler : HttpHandler {
       val authorization = SpotifyUserAuthorizationBuilder(code).build()
       val clientAPI = SpotifyClientApiBuilder(credentials = credentials, authorization = authorization).build()
 
-      addSpotifyClient(discordId, Spotify(clientAPI, discordId))
+      addSpotifyClient(discordId, SpotifyClient(clientAPI, discordId))
       "Successfully authenticated MoosicBot for Spotify interactions! YUSSSSS!"
 
     } catch (e: Exception) {

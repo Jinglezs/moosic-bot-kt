@@ -29,13 +29,13 @@ internal val SCOPES = arrayOf(
   SpotifyScope.USER_READ_RECENTLY_PLAYED
 )
 
-private val spotifyClients: MutableMap<Long, Spotify> = mutableMapOf()
+private val spotifyClients: MutableMap<Long, SpotifyClient> = mutableMapOf()
 
-suspend fun getSpotifyClient(id: Long): Spotify? {
+suspend fun getSpotifyClient(id: Long): SpotifyClient? {
 
   if (spotifyClients.containsKey(id)) return spotifyClients[id]!!
 
-  val spotify: Spotify? = newSuspendedTransaction {
+  val spotify: SpotifyClient? = newSuspendedTransaction {
 
     val refreshToken = UserInfo.select { UserInfo.id eq id }
       .limit(1)
@@ -46,7 +46,7 @@ suspend fun getSpotifyClient(id: Long): Spotify? {
     val authorization = SpotifyUserAuthorizationBuilder(token = getAccessToken(refreshToken)).build()
     val clientAPI = SpotifyClientApiBuilder(credentials, authorization).build()
 
-    Spotify(clientAPI, id)
+    SpotifyClient(clientAPI, id)
 
   }
 
@@ -72,7 +72,7 @@ private fun getAccessToken(refreshToken: String): Token {
 
 }
 
-fun addSpotifyClient(id: Long, spotify: Spotify) {
+fun addSpotifyClient(id: Long, spotify: SpotifyClient) {
 
   spotifyClients[id] = spotify
 
@@ -97,7 +97,7 @@ fun removeSpotifyClient(id: Long) {
 
 }
 
-data class Spotify(val clientAPI: SpotifyClientAPI, val discordId: Long)
+data class SpotifyClient(val clientAPI: SpotifyClientAPI, val discordId: Long)
 
 object UserInfo : Table() {
   val id = long("discord_id")
