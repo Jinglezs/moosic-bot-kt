@@ -12,6 +12,7 @@ import net.dv8tion.jda.api.hooks.SubscribeEvent
 import net.jingles.moosic.format
 import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
+import net.jingles.moosic.toPercent
 import java.awt.Color
 import java.time.Instant
 import java.util.*
@@ -64,7 +65,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
     } else {
 
       started = true
-      channel.sendMessage("The game has started! Guess the $type of each song >:V").queue()
+      channel.sendMessage("The game has started! You have 15 seconds to guess the __${type}__ of each song >:V").queue()
 
     }
 
@@ -103,7 +104,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
 
     // Start the next round after 10 seconds
     GlobalScope.launch {
-      delay(10_000)
+      delay(15_000)
       nextRound()
     }
 
@@ -127,7 +128,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
 
     val accuracy = Pair(
       mostAccurate?.key?.discordId?.let { channel.jda.getUserById(it)?.name } ?: "N/A",
-      mostAccurate?.value.let { "${it?.format(3) ?: "0"}%" }
+      mostAccurate?.value.let { it?.toPercent() ?: "0%" }
     )
 
     // Send an embedded message containing the results of the game
@@ -227,7 +228,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
     val score = verifyGuess(spotify, event.message.contentStripped) ?: return
 
     channel.sendMessage(
-      "${event.author.name} guessed the title with ${score.accuracy.format(2)} " +
+      "${event.author.name} guessed the title with ${score.accuracy.toPercent()} " +
         "accuracy in ${score.time.format(3)} seconds"
     ).queue()
 

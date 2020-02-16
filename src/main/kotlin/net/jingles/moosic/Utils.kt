@@ -19,6 +19,8 @@ fun Double.format(digits: Int) = "%,.${digits}f".format(this)
 
 fun Float.toPercent(): String = NumberFormat.getPercentInstance().format(this.toDouble())
 
+fun Double.toPercent(): String = NumberFormat.getPercentInstance().format(this)
+
 fun String.toZonedTime(): ZonedDateTime = ZonedDateTime.parse(this, DateTimeFormatter.ISO_DATE_TIME)
 
 fun ZonedDateTime.toReadable(): String = this.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL))
