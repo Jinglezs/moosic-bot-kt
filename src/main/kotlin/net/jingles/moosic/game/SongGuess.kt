@@ -1,6 +1,7 @@
 package net.jingles.moosic.game
 
 import com.adamratzman.spotify.SpotifyException
+import com.adamratzman.spotify.models.SimplePlaylist
 import com.adamratzman.spotify.models.Track
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -184,17 +185,24 @@ class SongGuess(
   private fun populateTracks(spotify: SpotifyClient, rounds: Int): LinkedList<Track> {
 
     val populatedList = LinkedList<Track>()
-    val playlists = spotify.clientAPI.playlists.getClientPlaylists().complete().items.toMutableList()
+
+    val playlists = spotify.clientAPI.playlists.getClientPlaylists().complete().items
+    val erroneousPlaylists = mutableListOf<SimplePlaylist>()
 
     while (populatedList.size < rounds) {
 
+      val simple = playlists.random()
+      if (erroneousPlaylists.contains(simple)) continue
+
       try {
 
-        val full = playlists.random().toFullPlaylist().complete() ?: continue
+        val full = simple.toFullPlaylist().complete() ?: continue
+
         val track = full.tracks.random().track
         if (track != null) populatedList.add(track)
 
       } catch (exception: Exception) {
+        erroneousPlaylists.add(simple)
         println("Error parsing playlist: Local track files are currently unsupported.")
         continue
       }
