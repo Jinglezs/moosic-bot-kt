@@ -228,7 +228,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
     val score = verifyGuess(spotify, event.message.contentStripped.toLowerCase()) ?: return
 
     channel.sendMessage(
-      "${event.author.name} guessed the title with ${score.accuracy.toPercent()} " +
+      "${event.author.name} guessed the $type with ${score.accuracy.toPercent()} " +
         "accuracy in ${score.time.format(3)} seconds"
     ).queue()
 
