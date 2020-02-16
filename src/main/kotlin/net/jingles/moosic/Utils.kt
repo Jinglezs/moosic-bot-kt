@@ -2,6 +2,8 @@ package net.jingles.moosic
 
 import com.adamratzman.spotify.models.*
 import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageChannel
 import java.text.NumberFormat
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -10,6 +12,8 @@ import java.time.format.FormatStyle
 // Conversions to Discord objects
 
 fun Long.toUser(jda: JDA) = jda.getUserById(this)
+
+fun Long.toMessage(channel: MessageChannel): Message = channel.retrieveMessageById(this).complete()
 
 // Formatting for numbers and dates
 

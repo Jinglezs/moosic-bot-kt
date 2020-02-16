@@ -2,13 +2,13 @@ package net.jingles.moosic.command.impl
 
 import com.adamratzman.spotify.SpotifyClientApiBuilder
 import com.adamratzman.spotify.endpoints.client.ClientPersonalizationApi
-import com.adamratzman.spotify.models.Artist
-import com.adamratzman.spotify.models.Track
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.*
 import net.jingles.moosic.command.*
+import net.jingles.moosic.menu.OrderedArtistsMessage
+import net.jingles.moosic.menu.OrderedTracksMessage
+import net.jingles.moosic.menu.PaginatedMessage
 import net.jingles.moosic.service.SCOPES
-import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
 import net.jingles.moosic.service.removeSpotifyClient
 import java.awt.Color
@@ -86,38 +86,27 @@ class FavoritesCommand : Command() {
     val spotify = getSpotifyClient(user.idLong)
       ?: throw CommandException("${user.name} has not authenticated MoosicBot for Spotify interactions >:V")
 
-    val mediaList = when (type) {
-      "artists" -> getArtistList(spotify, timeRange)
-      "tracks" -> getTrackList(spotify, timeRange)
+    val title = "$name's Favorite ${type.capitalize()} - ${timeRange.name
+      .toLowerCase().capitalize().replace("_", " ")}"
+
+    val paginatedMessage: PaginatedMessage<*> = when (type) {
+
+      "artists" -> {
+        val artists = spotify.clientAPI.personalization.getTopArtists(limit = 10).complete()
+        OrderedArtistsMessage(artists, title, 9e5.toLong(), context.event.channel)
+      }
+
+      "tracks" -> {
+        val tracks = spotify.clientAPI.personalization.getTopTracks(limit = 10).complete()
+        OrderedTracksMessage(tracks, title, 9e5.toLong(), context.event.channel)
+      }
+
       else -> throw CommandException("The first argument must either be \"tracks\" or \"artists\"")
     }
 
-    val embed = EmbedBuilder()
-      .setTitle("$name's Favorite ${type.capitalize()} - ${timeRange.name.toLowerCase().capitalize().replace("_", " ")}")
-      .setDescription(mediaList)
-      .setColor(Color.BLACK)
-      .setFooter("Powered by Spotify", SPOTIFY_ICON)
-      .build()
-
-    context.event.channel.sendMessage(embed).queue()
-
-  }
-
-  private fun getArtistList(spotify: SpotifyClient, range: ClientPersonalizationApi.TimeRange): String {
-
-    val artists: List<Artist> = spotify.clientAPI.personalization.getTopArtists(timeRange = range, limit = 15).complete()
-
-    return if (artists.isEmpty()) "Unable to find favorite artists."
-    else artists.toNumberedArtists()
-
-  }
-
-  private fun getTrackList(spotify: SpotifyClient, range: ClientPersonalizationApi.TimeRange): String {
-
-    val tracks: List<Track> = spotify.clientAPI.personalization.getTopTracks(timeRange = range, limit = 15).complete()
-
-    return if (tracks.isEmpty()) "Unable to find favorite tracks."
-    else tracks.toSimpleNumberedTrackInfo()
+    context.event.channel.sendMessage(paginatedMessage.render(0)).queue {
+      paginatedMessage.messageId = it.idLong
+    }
 
   }
 
@@ -176,7 +165,7 @@ class SongFeaturesCommand : Command() {
 
     val features = spotify.tracks.getAudioFeatures(currentTrack.id).complete()
 
-    val mainInfo = with (features) {
+    val mainInfo = with(features) {
       """
         Key: $key
         Mode: ${if (mode == 0) "Major" else "Minor"}
@@ -185,7 +174,7 @@ class SongFeaturesCommand : Command() {
       """.trimIndent()
     }
 
-    val confidenceMeasurements = with (features) {
+    val confidenceMeasurements = with(features) {
       """
         Acousticness: ${acousticness.toPercent()}
         Danceability: ${danceability.toPercent()}
@@ -226,7 +215,7 @@ class StalkCommand : Command() {
 
     val spotify = context.event.jda.getUsersByName(name, true)
       .mapNotNull { getSpotifyClient(it.idLong)?.clientAPI }.firstOrNull()
-        ?: throw CommandException("An authenticated user by that name could not be found >:V")
+      ?: throw CommandException("An authenticated user by that name could not be found >:V")
 
     val limit = if (context.getArgCount() > 1) min(context.arguments.pollFirst().toInt(), 15) else 15
 
@@ -241,7 +230,8 @@ class StalkCommand : Command() {
       .map { Pair(it.track, it.playedAt.toZonedTime()) }  // Pairs the track with the time it was played
       .sortedByDescending { it.second }                   // Puts the pairs in descending order (most recent first)
       .groupBy { it.second.hour }                         // Groups the pairs based on the hour the track was played
-      .forEach { (_, pairs) ->                            // Places each hour block into its own field
+      .forEach { (_, pairs) ->
+        // Places each hour block into its own field
 
         val title = pairs.first().second.toReadable()
         val tracks = pairs.map { it.first }.asIterable().toNumberedTrackInfo()

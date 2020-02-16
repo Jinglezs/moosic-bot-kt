@@ -7,6 +7,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.SubscribeEvent
@@ -249,7 +250,7 @@ class SongGuess(
     val score = verifyGuess(spotify, event.message.contentStripped.toLowerCase()) ?: return
 
     // Delete the message so other players can't copy it
-    event.message.delete().reason("Song Guess").queue()
+    if (channel.type == ChannelType.TEXT) event.message.delete().reason("Song Guess").queue()
 
     channel.sendMessage(
       "${event.author.name} guessed the $type with ${score.accuracy.toPercent()} " +
