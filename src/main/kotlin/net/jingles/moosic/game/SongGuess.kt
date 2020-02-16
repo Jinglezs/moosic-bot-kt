@@ -67,6 +67,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
 
     }
 
+    // End the game when all of the tracks are gone
     if (tracks.isEmpty()) {
       endGame(); return
     }
@@ -80,15 +81,18 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
       else -> currentTrack.artists.map { it.name }
     }
 
+    // Spotify only accepts lists of track IDs/URIs to play
     val tracksToPlay = listOf(currentTrack.id)
+
+    // Determines a random position in the track to begin playing at
     val maxDuration = (currentTrack.durationMs * (1 - 0.75)).toInt()
     val seekPosition = (0..maxDuration).random()
 
     players.forEach {
 
       with(it.clientAPI.player) {
-        startPlayback(tracksToPlay = tracksToPlay)
-        seek(seekPosition.toLong())
+        startPlayback(tracksToPlay = tracksToPlay).suspendQueue()// Play the track
+        seek(seekPosition.toLong()).suspendQueue() // Skip to a random position
       }
 
     }
@@ -114,7 +118,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
     val mostAccurate = scores.mapValues { it.value.sumByDouble { score -> score.accuracy } / it.value.size }
       .maxBy { entry -> entry.value }
 
-    // Pair the username with the formatted result
+    // Pair the usernames with the formatted results
     val time = Pair(
       fastestTime?.key?.discordId?.let { channel.jda.getUserById(it)?.name } ?: "N/A",
       fastestTime?.value.let { "${it?.format(3) ?: "0.0"} seconds" }
@@ -125,6 +129,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
       mostAccurate?.value.let { "${it?.format(3) ?: "0"}%" }
     )
 
+    // Send an embedded message containing the results of the game
     val embed = EmbedBuilder()
       .setTitle("Song Guess Results")
       .addField("Fastest Average Time", "${time.first}: ${time.second}", true)
