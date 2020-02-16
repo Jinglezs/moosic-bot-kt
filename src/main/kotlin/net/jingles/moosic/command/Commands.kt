@@ -115,10 +115,10 @@ enum class Category {
   PARTY,
   GENERAL,
   SPOTIFY,
-  GAME;
+  GAMES;
 
   fun getDisplayTitle(): String {
-    return name.toLowerCase().capitalize()
+    return name.toLowerCase().capitalize().removeSuffix("s")
   }
 
 }

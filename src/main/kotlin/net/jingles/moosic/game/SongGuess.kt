@@ -25,10 +25,14 @@ import kotlin.time.MonoClock
 const val SUCCESS_LIMIT = 0.75
 
 @ExperimentalTime
-class SongGuess(private val channel: MessageChannel, owner: SpotifyClient, private val rounds: Int) {
+class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
+                private val type: String, private val rounds: Int) {
 
   init {
+
     channel.jda.addEventListener(this)
+    channel.sendMessage("A game of Song Guess has been created. Send >join to play >:V").queue()
+
   }
 
   // State variables
@@ -42,9 +46,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient, priva
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
   private val tracks = populateTracks(owner, rounds)
   private val currentTrack get() = tracks.peek()
-
   private lateinit var possibleMatches: List<String>
-  // Assign at the start of a round
 
   private fun getRoundNumber() = (rounds - tracks.size) + 1
 
@@ -61,7 +63,12 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient, priva
       // Proceed to the next track
       tracks.removeFirst()
 
-    } else started = true
+    } else {
+
+      started = true
+      channel.sendMessage("The game has started! Guess the $type of each song >:V").queue()
+
+    }
 
     if (tracks.isEmpty()) {
       endGame(); return
@@ -69,8 +76,12 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient, priva
 
     // Removes any extra information from the title, which is usually in parentheses
     // or following a hyphen. Ex: Never Be Alone - MTV Unplugged -> Never Be Alone
-    possibleMatches = currentTrack.name.substringBefore("( | -")
-      .split(" ").map { it.trim() }
+
+    possibleMatches = when(type) {
+      "track" -> currentTrack.name.substringBefore("( | -")
+        .split(" ").map { it.trim() }
+      else -> currentTrack.artists.map { it.name }
+    }
 
     val tracksToPlay = listOf(currentTrack.id)
     val maxDuration = (currentTrack.durationMs * (1 - 0.75)).toInt()
@@ -129,6 +140,47 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient, priva
 
   }
 
+  /**
+   * Determines whether or a player's guess is correct
+   * Returns a pair containing a boolean, where "true"
+   * means correct, and a Long that contains the true
+   * time it took for the player to guess.
+   */
+  private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
+
+    val matches = (possibleMatches + guess.split(" "))
+      .groupingBy { it }.eachCount().count { it.value > 1 }
+
+    val accuracy = matches.toDouble() / possibleMatches.size
+    if (accuracy < SUCCESS_LIMIT) return null
+
+    val score = Score(accuracy, clockMark.elapsedNow().inSeconds)
+
+    if (!scores.containsKey(player)) scores[player] = mutableListOf()
+    scores[player]!!.add(score)
+
+    return score
+
+  }
+
+  private fun populateTracks(spotify: SpotifyClient, rounds: Int): LinkedList<Track> {
+
+    val populatedList = LinkedList<Track>()
+    val playlists = spotify.clientAPI.playlists.getClientPlaylists().complete().items
+
+    while (tracks.size < rounds) {
+
+      val full = playlists.random().toFullPlaylist().complete() ?: continue
+      val track = full.tracks.random().track
+
+      if (track != null) populatedList.add(track)
+
+    }
+
+    return populatedList
+
+  }
+
   @SubscribeEvent
   private fun onGuess(event: MessageReceivedEvent) {
 
@@ -168,47 +220,6 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient, priva
       "${event.author.name} guessed the title with ${score.accuracy.format(2)} " +
         "accuracy in ${score.time.format(3)} seconds"
     ).queue()
-
-  }
-
-  /**
-   * Determines whether or a player's guess is correct
-   * Returns a pair containing a boolean, where "true"
-   * means correct, and a Long that contains the true
-   * time it took for the player to guess.
-   */
-  private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
-
-    val matches = (possibleMatches + guess.split(" "))
-      .groupingBy { it }.eachCount().count { it.value > 1 }
-
-    val accuracy = matches.toDouble() / possibleMatches.size
-    if (accuracy < SUCCESS_LIMIT) return null
-
-    val score = Score(accuracy, clockMark.elapsedNow().inSeconds)
-
-    if (!scores.containsKey(player)) scores[player] = mutableListOf()
-    scores[player]!!.add(score)
-
-    return score
-
-  }
-
-  private fun populateTracks(spotify: SpotifyClient, rounds: Int): LinkedList<Track> {
-
-    val populatedList = LinkedList<Track>()
-    val playlists = spotify.clientAPI.playlists.getClientPlaylists().complete().items
-
-    while (tracks.size < rounds) {
-
-      val full = playlists.random().toFullPlaylist().complete() ?: continue
-      val track = full.tracks.random().track
-
-      if (track != null) populatedList.add(track)
-
-    }
-
-    return populatedList
 
   }
 
