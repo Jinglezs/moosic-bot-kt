@@ -77,9 +77,11 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
     // or following a hyphen. Ex: Never Be Alone - MTV Unplugged -> Never Be Alone
 
     possibleMatches = when(type) {
-      "track" -> currentTrack.name.substringBefore("( | -")
+      "track" -> currentTrack.name.substringBefore("(").substringBefore("-")
         .split(" ").map { it.trim().toLowerCase() }
-      else -> currentTrack.artists.map { it.name.toLowerCase() }
+      else -> currentTrack.artists.joinToString(" ") { it.name.toLowerCase() }
+        .split(" ")
+
     }
 
     // Spotify only accepts lists of track IDs/URIs to play
@@ -140,6 +142,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
       .build()
 
     channel.sendMessage(embed).queue()
+    channel.jda.removeEventListener(this)
 
   }
 
@@ -173,10 +176,9 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
 
     while (populatedList.size < rounds) {
 
-      val full = playlists.random().toFullPlaylist().complete() ?: continue
-
       try {
 
+        val full = playlists.random().toFullPlaylist().complete() ?: continue
         val track = full.tracks.random().track
         if (track != null) populatedList.add(track)
 
