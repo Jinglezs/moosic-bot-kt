@@ -19,8 +19,8 @@ class HelpCommand : Command() {
     val category = when (context.arguments.pollFirst().toLowerCase()) {
       "general" -> Category.GENERAL
       "spotify" -> Category.SPOTIFY
-      "party" -> Category.PARTY
-      "game" -> Category.GAME
+      "party", "parties" -> Category.PARTY
+      "game", "games" -> Category.GAMES
       else -> Category.GENERAL
     }
 
