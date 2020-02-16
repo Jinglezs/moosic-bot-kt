@@ -28,25 +28,22 @@ const val SUCCESS_LIMIT = 0.75
 class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
                 private val type: String, private val rounds: Int) {
 
-  init {
-
-    channel.jda.addEventListener(this)
-    channel.sendMessage("A game of Song Guess has been created. Send >join to play >:V").queue()
-
-  }
-
   // State variables
-
   private var started = false
   private lateinit var clockMark: ClockMark
 
   // Game information
-
   private val players = mutableSetOf<SpotifyClient>()
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
   private val tracks = populateTracks(owner, rounds)
   private val currentTrack get() = tracks.peek()
   private lateinit var possibleMatches: List<String>
+
+  init {
+    players.add(owner)
+    channel.jda.addEventListener(this)
+    channel.sendMessage("A game of Song Guess has been created. Send >join to play >:V").queue()
+  }
 
   private fun getRoundNumber() = (rounds - tracks.size) + 1
 
@@ -182,7 +179,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
   }
 
   @SubscribeEvent
-  private fun onGuess(event: MessageReceivedEvent) {
+  fun onGuess(event: MessageReceivedEvent) {
 
     // Ignore messages from other channels or bots
     if (event.channel != channel || event.message.author.isBot) return
