@@ -1,5 +1,6 @@
 package net.jingles.moosic.game
 
+import com.adamratzman.spotify.SpotifyException
 import com.adamratzman.spotify.models.Track
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -26,8 +27,10 @@ import kotlin.time.MonoClock
 const val SUCCESS_LIMIT = 0.75
 
 @ExperimentalTime
-class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
-                private val type: String, private val rounds: Int) {
+class SongGuess(
+  private val channel: MessageChannel, owner: SpotifyClient,
+  private val type: String, private val rounds: Int
+) {
 
   // State variables
   private var started = false
@@ -58,6 +61,8 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
           scores[it.key]!!.add(Score(0.0, 10.0))
         }
 
+      channel.sendMessage("The correct $type was ${currentTrack.name}").queue()
+
       // Proceed to the next track
       tracks.removeFirst()
 
@@ -76,7 +81,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
     // Removes any extra information from the title, which is usually in parentheses
     // or following a hyphen. Ex: Never Be Alone - MTV Unplugged -> Never Be Alone
 
-    possibleMatches = when(type) {
+    possibleMatches = when (type) {
       "track" -> currentTrack.name.substringBefore("(").substringBefore("-")
         .split(" ").map { it.trim().toLowerCase() }
       else -> currentTrack.artists.joinToString(" ") { it.name.toLowerCase() }
@@ -91,13 +96,20 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
     val maxDuration = (currentTrack.durationMs * (1 - 0.75)).toInt()
     val seekPosition = (0..maxDuration).random()
 
-    players.forEach {
+    try {
 
-      with(it.clientAPI.player) {
-        startPlayback(tracksToPlay = tracksToPlay).suspendQueue()// Play the track
-        seek(seekPosition.toLong()).suspendQueue() // Skip to a random position
+      players.forEach {
+
+        with(it.clientAPI.player) {
+          startPlayback(tracksToPlay = tracksToPlay).suspendQueue()// Play the track
+          seek(seekPosition.toLong()).suspendQueue() // Skip to a random position
+        }
+
       }
 
+    } catch (e: SpotifyException) {
+      channel.sendMessage("Error continuing to the next round: ${e.message}").queue()
+      endGame(); return
     }
 
     // Marks the time this round began
@@ -227,6 +239,9 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
 
     // Gets a decimal that reflects the accuracy
     val score = verifyGuess(spotify, event.message.contentStripped.toLowerCase()) ?: return
+
+    // Delete the message so other players can't copy it
+    event.message.delete().reason("Song Guess").queue()
 
     channel.sendMessage(
       "${event.author.name} guessed the $type with ${score.accuracy.toPercent()} " +
