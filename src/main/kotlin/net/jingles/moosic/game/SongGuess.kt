@@ -168,7 +168,7 @@ class SongGuess(private val channel: MessageChannel, owner: SpotifyClient,
     val populatedList = LinkedList<Track>()
     val playlists = spotify.clientAPI.playlists.getClientPlaylists().complete().items
 
-    while (tracks.size < rounds) {
+    while (populatedList.size < rounds) {
 
       val full = playlists.random().toFullPlaylist().complete() ?: continue
       val track = full.tracks.random().track
