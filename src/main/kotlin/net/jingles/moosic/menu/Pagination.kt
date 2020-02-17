@@ -21,7 +21,7 @@ import java.time.Instant
 private val SYMBOLS = mapOf(
   "left" to ":arrow_left:".toUnicodeEmoji(),
   "right" to ":arrow_right:".toUnicodeEmoji(),
-  "stop" to ":stop_button:".toUnicodeEmoji()
+  "stop" to ":stop:".toUnicodeEmoji()
 )
 
 private val NUMBERS = mapOf(

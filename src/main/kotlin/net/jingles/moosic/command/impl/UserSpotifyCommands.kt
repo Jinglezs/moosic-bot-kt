@@ -353,10 +353,10 @@ class PlayerCommand : Command() {
     val query = context.arguments.joinToString(" ")
 
     val searchResult: PagingObject<*> = when (searchType) {
-      "track" -> searchAPI.searchTrack(query).complete()
-      "artist" -> searchAPI.searchArtist(query).complete()
-      "album" -> searchAPI.searchAlbum(query).complete()
-      "playlist" -> searchAPI.searchPlaylist(query).complete()
+      "track" -> searchAPI.searchTrack(query = query, limit = 5).complete()
+      "artist" -> searchAPI.searchArtist(query = query, limit = 5).complete()
+      "album" -> searchAPI.searchAlbum(query = query, limit = 5).complete()
+      "playlist" -> searchAPI.searchPlaylist(query = query, limit = 5).complete()
       else -> throw CommandException("Search type must be one of the following: ${SEARCH_TYPES.joinToString()}")
     }
 

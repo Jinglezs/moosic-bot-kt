@@ -3,6 +3,7 @@ package net.jingles.moosic.command
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.SubscribeEvent
 import org.reflections.Reflections
@@ -50,7 +51,9 @@ object CommandManager {
 
       try {
 
-        if (command.meta.deleteCaller) event.message.delete().queue()
+        if (command.meta.deleteCaller && context.event.channelType == ChannelType.TEXT)
+          event.message.delete().queue()
+
         command.execute(context)
 
       } catch (exception: RuntimeException) {
