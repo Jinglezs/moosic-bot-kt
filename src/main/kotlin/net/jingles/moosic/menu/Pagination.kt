@@ -75,16 +75,11 @@ class ReactionListener(private val message: PaginatedMessage<*>) {
   @SubscribeEvent
   fun onReactionAdd(event: MessageReactionAddEvent) {
 
-    println("Reaction event received! >:VV")
-
-    if (event.messageIdLong != message.messageId) return
-
-    println("They are the same message too! >:VVV")
+    if (event.messageIdLong != message.messageId || event.user?.isBot == true) return
 
     val reaction = event.reaction.reactionEmote.emoji
 
     if (reaction == STOP) {
-      println("Stopping reaction listener")
       message.stop(); return
     }
 
@@ -94,14 +89,10 @@ class ReactionListener(private val message: PaginatedMessage<*>) {
       else -> 0
     }
 
-    println("Received directional command: $direction")
-
     event.reaction.removeReaction().queue()
 
     GlobalScope.launch {
-      event.channel.editMessageById(event.messageId, message.render(direction)).queue {
-        println("Edited the message!")
-      }
+      event.channel.editMessageById(event.messageId, message.render(direction)).queue()
     }
 
   }
