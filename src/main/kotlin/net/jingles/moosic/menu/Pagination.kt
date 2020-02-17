@@ -1,6 +1,7 @@
 package net.jingles.moosic.menu
 
 import com.adamratzman.spotify.models.AbstractPagingObject
+import com.adamratzman.spotify.models.CursorBasedPagingObject
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -50,12 +51,6 @@ abstract class Menu<T : Any>(
 
     val message = channel.sendMessage(render(0)).complete()
 
-    with(message) {
-      addReaction(SYMBOLS["left"]!!).queue()
-      addReaction(SYMBOLS["stop"]!!).queue()
-      addReaction(SYMBOLS["right"]!!).queue()
-    }
-
     this.messageId = message.idLong
     this.listeners = arrayOf(*listeners)
 
@@ -87,8 +82,23 @@ open class PaginatedMessage<T : Any>(
   pagingObject: AbstractPagingObject<T>,
   timeout: Long,
   title: String,
+  private val stopButton: Boolean = true,
   composer: (AbstractPagingObject<T>, EmbedBuilder) -> Unit
 ) : Menu<T>(pagingObject, timeout, title, composer) {
+
+  override suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
+
+    with(super.create(channel, *listeners)) {
+
+      if (pagingObject !is CursorBasedPagingObject)  addReaction(SYMBOLS["left"]!!).queue()
+      if (stopButton) addReaction(SYMBOLS["stop"]!!).queue()
+      addReaction(SYMBOLS["right"]!!).queue()
+
+      return this
+
+    }
+
+  }
 
   /**
    * Draws the items of either the current, previous, or next page.
@@ -155,7 +165,7 @@ class PaginatedSelection<T : Any>(
   title: String,
   composer: (AbstractPagingObject<T>, EmbedBuilder) -> Unit,
   private val afterSelection: (T, EmbedBuilder) -> MessageEmbed
-) : PaginatedMessage<T>(pagingObject, timeout, title, composer) {
+) : PaginatedMessage<T>(pagingObject, timeout, title, false, composer) {
 
   override suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
 
@@ -164,8 +174,8 @@ class PaginatedSelection<T : Any>(
 
     with (super.create(channel, *listeners)) {
 
-      for  (option in 1..pagingObject.limit) {
-        addReaction(NUMBERS[option]!!).queue()
+      for  (index in 1..pagingObject.limit) {
+        addReaction(NUMBERS[index]!!).queue()
       }
 
       return this
@@ -195,11 +205,11 @@ class SelectionReactionListener(private val message: PaginatedSelection<*>) {
     val reaction = event.reaction.reactionEmote.emoji
 
     val numericalValue = NUMBERS.entries
-      .firstOrNull { it.component2() == reaction }?.key
+      .firstOrNull { it.component2() == reaction }?.key?.minus(1)
 
     if (numericalValue != null) {
       GlobalScope.launch {
-        event.channel.editMessageById(event.messageId, message.onSelection(numericalValue))
+        event.channel.editMessageById(event.messageId, message.onSelection(numericalValue)).queue()
       }
     }
 

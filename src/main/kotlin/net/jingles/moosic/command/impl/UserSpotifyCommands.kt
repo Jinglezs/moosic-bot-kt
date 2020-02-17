@@ -6,6 +6,7 @@ import com.adamratzman.spotify.endpoints.client.ClientPlayerApi
 import com.adamratzman.spotify.models.*
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageChannel
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.jingles.moosic.*
 import net.jingles.moosic.command.*
 import net.jingles.moosic.menu.PaginatedMessage
@@ -235,6 +236,8 @@ class StalkCommand : Command() {
 
     val message = PaginatedMessage(pagingObject, 9e5.toLong(), "$name's Play History") { paging, builder ->
 
+      builder.fields.clear() // Clear the fields from the previous page
+
       paging.items.map { Pair(it.track, it.playedAt.toZonedTime()) }  // Pairs the track with the time it was played
         .sortedByDescending { it.second }                   // Puts the pairs in descending order (most recent first)
         .groupBy { it.second.hour }                         // Groups the pairs based on the hour the track was played
@@ -362,8 +365,19 @@ class PlayerCommand : Command() {
     }
 
     if (searchResult.items.isEmpty()) throw CommandException("There were no search results for that query.")
+    else if (searchResult.items.size == 1) {
 
-    val message = PaginatedSelection(searchResult, 9e5.toLong(), "${context.event.author.name}'s Search Results",
+      val builder = EmbedBuilder()
+        .setColor(Color.WHITE)
+        .setFooter("Powered by Spotify", SPOTIFY_ICON)
+        .setTimestamp(Instant.now())
+
+      context.event.channel.sendMessage(playSelection(client, searchResult.items[0], builder)).queue()
+      return
+
+    }
+
+    val message = PaginatedSelection(searchResult, 6e4.toLong(), "${context.event.author.name}'s Search Results",
       composer = { pagingObject, builder ->
 
         val description = when (pagingObject.items[0]) {
@@ -375,37 +389,44 @@ class PlayerCommand : Command() {
 
         builder.setDescription(description)
 
-      }, afterSelection = { selection, builder ->
-
-        when (selection) {
-
-          is Track -> {
-            builder.setTitle(selection.toSimpleTrackInfo()); builder.setImage(selection.album.images[0].url)
-            client.clientAPI.player.startPlayback(tracksToPlay = listOf(selection.id)).complete()
-          }
-
-          is Artist -> {
-            builder.setTitle(selection.name); builder.setImage(selection.images[0].url)
-            client.clientAPI.player.startPlayback(artist = selection.id).complete()
-          }
-
-          is SimpleAlbum -> {
-            builder.setTitle(selection.name); builder.setImage(selection.images[0].url)
-            client.clientAPI.player.startPlayback(album = selection.id).complete()
-          }
-
-          else -> with (selection as SimplePlaylist) {
-            builder.setTitle(toPlaylistInfo()); builder.setImage(images[0].url)
-            client.clientAPI.player.startPlayback(playlist = uri).complete()
-          }
-
-        }
-
-        builder.build()
-
-      })
+      }, afterSelection = { selection, builder -> playSelection(client, selection, builder) })
 
     message.create(context.event.channel, PaginatedReactionListener(message), SelectionReactionListener(message))
+
+  }
+
+  private fun playSelection(client: SpotifyClient, selection: Any, builder: EmbedBuilder): MessageEmbed {
+
+    val playerApi = client.clientAPI.player
+    var title = "Now Playing: "
+    val url: String
+
+    when (selection) {
+
+      is Track -> {
+        title += selection.toSimpleTrackInfo(); url = selection.album.images[0].url
+        playerApi.startPlayback(tracksToPlay = listOf(selection.id)).complete()
+      }
+
+      is Artist -> {
+        title += selection.name; url = selection.images[0].url
+        playerApi.startPlayback(artist = selection.id).complete()
+      }
+
+      is SimpleAlbum -> {
+        title += selection.name; url = selection.images[0].url
+        playerApi.startPlayback(album = selection.id).complete()
+      }
+
+      else -> with(selection as SimplePlaylist) {
+        title += toPlaylistInfo(); url = images[0].url
+        playerApi.startPlayback(playlist = uri).complete()
+      }
+
+    }
+
+    builder.setTitle(title); builder.setImage(url)
+    return builder.build()
 
   }
 
