@@ -91,12 +91,12 @@ class FavoritesCommand : Command() {
     when (type) {
 
       "artists" -> {
-        val artists = spotify.clientAPI.personalization.getTopArtists(limit = 10).complete()
+        val artists = spotify.clientAPI.personalization.getTopArtists(timeRange = timeRange, limit = 10).complete()
         OrderedArtistsMessage(artists, title, 9e5.toLong()).create(context.event.channel)
       }
 
       "tracks" -> {
-        val tracks = spotify.clientAPI.personalization.getTopTracks(limit = 10).complete()
+        val tracks = spotify.clientAPI.personalization.getTopTracks(timeRange = timeRange, limit = 10).complete()
         OrderedTracksMessage(tracks, title, 9e5.toLong()).create(context.event.channel)
       }
 

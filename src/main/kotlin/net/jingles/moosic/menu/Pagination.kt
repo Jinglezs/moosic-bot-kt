@@ -35,9 +35,13 @@ abstract class PaginatedMessage<T : Any>(
 
 
   @SubscribeEvent
-  private fun onReactionAdd(event: MessageReactionAddEvent) {
+  fun onReactionAdd(event: MessageReactionAddEvent) {
+
+    println("Reaction event received! >:VV")
 
     if (event.messageIdLong != messageId) return
+
+    println("They are the same message too! >:VVV")
 
     val reaction = event.reactionEmote
     if (reaction.isEmote) return
@@ -53,7 +57,7 @@ abstract class PaginatedMessage<T : Any>(
     }
 
     GlobalScope.launch {
-      event.channel.editMessageById(event.messageId, render(direction))
+      event.channel.editMessageById(event.messageId, render(direction)).queue()
     }
 
   }
