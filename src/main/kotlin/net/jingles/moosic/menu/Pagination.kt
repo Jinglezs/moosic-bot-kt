@@ -89,7 +89,7 @@ class ReactionListener(private val message: PaginatedMessage<*>) {
       else -> 0
     }
 
-    event.reaction.removeReaction().queue()
+    event.user?.let { event.reaction.removeReaction(it).queue() }
 
     GlobalScope.launch {
       event.channel.editMessageById(event.messageId, message.render(direction)).queue()
@@ -116,7 +116,8 @@ class OrderedTracksMessage(tracks: PagingObject<Track>, title: String, timeout: 
       else -> pagingObject.items
     } ?: pagingObject.items
 
-    return builder.setDescription(items.toSimpleNumberedTrackInfo()).build()
+    val description = items.toSimpleNumberedTrackInfo(pagingObject.offset)
+    return builder.setDescription(description).build()
 
   }
 
@@ -139,7 +140,8 @@ class OrderedArtistsMessage(artists: PagingObject<Artist>, title: String, timeou
       else -> pagingObject.items
     } ?: pagingObject.items
 
-    return builder.setDescription(items.toNumberedArtists()).build()
+    val description = items.toNumberedArtists(pagingObject.offset)
+    return builder.setDescription(description).build()
 
   }
 

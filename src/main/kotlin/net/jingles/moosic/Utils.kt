@@ -35,18 +35,18 @@ fun Iterable<SimpleArtist>.toNames() = joinToString { it.name }
 
 fun Iterable<Artist>.toSimpleNames() = joinToString { it.name }
 
-fun Iterable<Artist>.toNumberedArtists() =
-  mapIndexed { index, artist -> "${index + 1}. ${artist.name}" }.joinToString("\n")
+fun Iterable<Artist>.toNumberedArtists(offset: Int = 0) =
+  mapIndexed { index, artist -> "${index + offset + 1}. ${artist.name}" }.joinToString("\n")
 
 fun SimpleTrack.toTrackInfo() = "$name by ${artists.toNames()}"
 
 fun Track.toSimpleTrackInfo() = "$name by ${artists.toNames()}"
 
-fun Iterable<SimpleTrack>.toNumberedTrackInfo() =
-  mapIndexed { index, track -> "${index + 1}. ${track.toTrackInfo()}" }.joinToString("\n")
+fun Iterable<SimpleTrack>.toNumberedTrackInfo(offset: Int = 0) =
+  mapIndexed { index, track -> "${index + offset + 1}. ${track.toTrackInfo()}" }.joinToString("\n")
 
-fun Iterable<Track>.toSimpleNumberedTrackInfo() =
-  mapIndexed { index, track -> "${index + 1}. ${track.toSimpleTrackInfo()}" }.joinToString("\n")
+fun Iterable<Track>.toSimpleNumberedTrackInfo(offset: Int = 0) =
+  mapIndexed { index, track -> "${index + offset + 1}. ${track.toSimpleTrackInfo()}" }.joinToString("\n")
 
 fun SimpleAlbum.toAlbumInfo() = "$name by ${artists.toNames()}"
 
