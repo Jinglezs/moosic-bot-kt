@@ -49,7 +49,10 @@ object CommandManager {
     command.job = GlobalScope.launch {
 
       try {
+
+        if (command.meta.deleteCaller) event.message.delete().queue()
         command.execute(context)
+
       } catch (exception: RuntimeException) {
 
         val message = when (exception) {
@@ -104,7 +107,8 @@ annotation class CommandMeta(
   val triggers: Array<String>,
   val description: String,
   val minArgs: Int = 0,
-  val args: String = ""
+  val args: String = "",
+  val deleteCaller: Boolean = false
 )
 
 /**

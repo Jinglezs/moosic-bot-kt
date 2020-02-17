@@ -1,9 +1,6 @@
 package net.jingles.moosic.menu
 
 import com.adamratzman.spotify.models.AbstractPagingObject
-import com.adamratzman.spotify.models.Artist
-import com.adamratzman.spotify.models.PagingObject
-import com.adamratzman.spotify.models.Track
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -11,47 +8,98 @@ import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.ChannelType
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent
 import net.dv8tion.jda.api.hooks.SubscribeEvent
 import net.jingles.moosic.SPOTIFY_ICON
-import net.jingles.moosic.toNumberedArtists
-import net.jingles.moosic.toSimpleNumberedTrackInfo
+import net.jingles.moosic.toUnicodeEmoji
 import java.awt.Color
 import java.time.Instant
 
-private const val LEFT = "\u25C0"
-private const val RIGHT = "\u25B6"
-private const val STOP = "\u23F9"
+private val SYMBOLS = mapOf(
+  "left" to ":arrow_left:".toUnicodeEmoji(),
+  "right" to ":arrow_right:".toUnicodeEmoji(),
+  "stop" to ":stop_button:".toUnicodeEmoji()
+)
 
-abstract class PaginatedMessage<T : Any>(
+private val NUMBERS = mapOf(
+  1 to ":one:".toUnicodeEmoji(), 2 to ":two:".toUnicodeEmoji(),
+  3 to ":three:".toUnicodeEmoji(), 4 to ":four:".toUnicodeEmoji(),
+  5 to ":five:".toUnicodeEmoji(), 6 to ":six".toUnicodeEmoji(),
+  7 to ":seven:".toUnicodeEmoji(), 8 to ":eight:".toUnicodeEmoji(),
+  9 to ":nine:".toUnicodeEmoji(), 9 to ":nine:".toUnicodeEmoji(),
+  10 to ":ten:".toUnicodeEmoji()
+)
+
+abstract class Menu<T : Any>(
   protected var pagingObject: AbstractPagingObject<T>,
   private val timeout: Long,
-  title: String
+  title: String,
+  protected val composer: (AbstractPagingObject<T>, EmbedBuilder) -> Unit
 ) {
 
-  private lateinit var listener: ReactionListener
-  private lateinit var jda: JDA
-  private lateinit var job: Job
-  var messageId: Long = 0
-
-  private val builder = EmbedBuilder()
+  protected val builder = EmbedBuilder()
     .setTitle(title)
     .setColor(Color.WHITE)
     .setFooter("Powered by Spotify", SPOTIFY_ICON)
     .setTimestamp(Instant.now())
 
+  private lateinit var jda: JDA
+  private lateinit var job: Job
+  private lateinit var listeners: Array<Any>
+  internal var messageId: Long = 0
+
+  open suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
+
+    val message = channel.sendMessage(render(0)).complete()
+
+    with(message) {
+      addReaction(":arrow_left:".toUnicodeEmoji()).queue()
+      addReaction(":stop_button:".toUnicodeEmoji()).queue()
+      addReaction(":arrow_right".toUnicodeEmoji()).queue()
+    }
+
+    this.messageId = message.idLong
+    this.listeners = arrayOf(listeners)
+
+    jda = channel.jda
+    jda.addEventListener(listeners)
+
+    job = GlobalScope.launch {
+      delay(timeout)
+      stop()
+    }
+
+    return message
+
+  }
+
+  abstract suspend fun render(direction: Int? = 0): MessageEmbed
+
   /**
-   * Determines the content that is displayed on the current page
+   * Unregisters the event listener and cancels the timeout job
    */
-  abstract suspend fun getContent(): String
+  open fun stop() {
+    job.cancel()
+    jda.removeEventListener(*listeners)
+  }
+
+}
+
+open class PaginatedMessage<T : Any>(
+  pagingObject: AbstractPagingObject<T>,
+  timeout: Long,
+  title: String,
+  composer: (AbstractPagingObject<T>, EmbedBuilder) -> Unit
+) : Menu<T>(pagingObject, timeout, title, composer) {
 
   /**
    * Draws the items of either the current, previous, or next page.
    * @param direction negative for previous, 0 for current, positive for next
    */
-  suspend fun render(direction: Int): MessageEmbed {
+  override suspend fun render(direction: Int?): MessageEmbed {
 
     pagingObject = when (direction) {
       -1 -> pagingObject.getPrevious()
@@ -59,48 +107,19 @@ abstract class PaginatedMessage<T : Any>(
       else -> pagingObject
     } ?: pagingObject
 
-    return builder.setDescription(getContent()).build()
+    composer.invoke(pagingObject, builder)
+    return builder.build()
 
-  }
-
-  /**
-   * Sends the original message in the provided channel, adds the emoji
-   * controls, and stores the message ID for future use.
-   */
-  suspend fun create(channel: MessageChannel) {
-
-    val message = channel.sendMessage(render(0)).complete()
-
-    with(message) {
-      addReaction(LEFT).queue()
-      addReaction(STOP).queue()
-      addReaction(RIGHT).queue()
-    }
-
-    jda = channel.jda
-    messageId = message.idLong
-
-    listener = ReactionListener(this)
-    jda.addEventListener(listener)
-
-    job = GlobalScope.launch {
-      delay(timeout)
-      stop()
-    }
-
-  }
-
-  /**
-   * Unregisters the event listener and cancels the timeout job
-   */
-  fun stop() {
-    job.cancel()
-    jda.removeEventListener(listener)
   }
 
 }
 
-class ReactionListener(private val message: PaginatedMessage<*>) {
+/**
+ * A reaction listener for the default PaginatedMessage in which clicking the
+ * left arrow displays the previous set of items from the PagingObject, the
+ * right displays the next set of items, and stop unregisters the listener.
+ */
+class PaginatedReactionListener(private val message: PaginatedMessage<*>) {
 
   @SubscribeEvent
   fun onReactionAdd(event: MessageReactionAddEvent) {
@@ -109,13 +128,13 @@ class ReactionListener(private val message: PaginatedMessage<*>) {
 
     val reaction = event.reaction.reactionEmote.emoji
 
-    if (reaction == STOP) {
+    if (reaction == SYMBOLS["stop"]) {
       message.stop(); return
     }
 
     val direction = when (reaction) {
-      LEFT -> -1
-      RIGHT -> 1
+      SYMBOLS["left"] -> -1
+      SYMBOLS["right"] -> 1
       else -> 0
     }
 
@@ -131,17 +150,64 @@ class ReactionListener(private val message: PaginatedMessage<*>) {
 
 }
 
-class OrderedTracksMessage(tracks: PagingObject<Track>, timeout: Long, title: String) :
-  PaginatedMessage<Track>(tracks, timeout, title) {
+/**
+ * An extended version of the default PaginatedMessage that includes number emotes that
+ * represents selections the user may choose from.
+ */
+class PaginatedSelection<T : Any>(
+  pagingObject: AbstractPagingObject<T>,
+  timeout: Long,
+  title: String,
+  composer: (AbstractPagingObject<T>, EmbedBuilder) -> Unit,
+  private val afterSelection: (T, EmbedBuilder) -> MessageEmbed
+) : PaginatedMessage<T>(pagingObject, timeout, title, composer) {
 
-  override suspend fun getContent(): String =
-    pagingObject.items.toSimpleNumberedTrackInfo(pagingObject.offset)
+  override suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
+
+    if (pagingObject.limit > 10)
+      throw IllegalArgumentException("The paging object's limit must be 10 items or less.")
+
+    with (super.create(channel, *listeners)) {
+
+      for  (option in 1..pagingObject.limit) {
+        addReaction(NUMBERS[option]!!).queue()
+      }
+
+      return this
+
+    }
+
+  }
+
+  fun onSelection(selection: Int): MessageEmbed {
+
+    val selected: T = pagingObject[selection]
+    stop()
+
+    return afterSelection.invoke(selected, builder)
+
+  }
 
 }
 
-class OrderedArtistsMessage(artists: PagingObject<Artist>, timeout: Long, title: String) :
-  PaginatedMessage<Artist>(artists, timeout, title) {
+class PaginatedSelectionReactionListener(private val message: PaginatedSelection<*>) {
 
-  override suspend fun getContent(): String = with (pagingObject) { this.toNumberedArtists(offset) }
+  @SubscribeEvent
+  fun onReactionAdd(event: MessageReactionAddEvent) {
+
+    if (event.messageIdLong != message.messageId || event.user?.isBot == true) return
+
+    val reaction = event.reaction.reactionEmote.emoji
+
+    val numericalValue = NUMBERS.entries
+      .firstOrNull { it.component2() == reaction }?.key
+
+    if (numericalValue != null) {
+      GlobalScope.launch {
+        event.channel.editMessageById(event.messageId, message.onSelection(numericalValue))
+      }
+    }
+
+  }
 
 }

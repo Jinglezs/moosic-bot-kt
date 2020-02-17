@@ -2,19 +2,24 @@ package net.jingles.moosic.command.impl
 
 import com.adamratzman.spotify.SpotifyClientApiBuilder
 import com.adamratzman.spotify.endpoints.client.ClientPersonalizationApi
+import com.adamratzman.spotify.endpoints.client.ClientPlayerApi
+import com.adamratzman.spotify.models.*
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.MessageChannel
 import net.jingles.moosic.*
 import net.jingles.moosic.command.*
-import net.jingles.moosic.menu.OrderedArtistsMessage
-import net.jingles.moosic.menu.OrderedTracksMessage
+import net.jingles.moosic.menu.PaginatedMessage
+import net.jingles.moosic.menu.PaginatedReactionListener
+import net.jingles.moosic.menu.PaginatedSelection
 import net.jingles.moosic.service.SCOPES
+import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
 import net.jingles.moosic.service.removeSpotifyClient
 import java.awt.Color
 import java.time.Instant
-import kotlin.math.min
 
 private const val NOT_AUTHENTICATED = "This command requires Spotify authentication >:V"
+private val SEARCH_TYPES = listOf("track", "album", "playlist", "artist")
 
 @CommandMeta(
   category = Category.SPOTIFY, triggers = ["authenticate"], minArgs = 0,
@@ -88,21 +93,33 @@ class FavoritesCommand : Command() {
     val title = "$name's Favorite ${type.capitalize()} - ${timeRange.name
       .toLowerCase().capitalize().replace("_", " ")}"
 
-    when (type) {
+    val message: PaginatedMessage<*> = when (type) {
 
       "artists" -> {
+
         val artists = spotify.clientAPI.personalization.getTopArtists(timeRange = timeRange, limit = 10).complete()
-        OrderedArtistsMessage(artists, 9e5.toLong(), title).create(context.event.channel)
+
+        PaginatedMessage(artists, 9e5.toLong(), title) { paging, builder ->
+          builder.setDescription(paging.items.toNumberedArtists(paging.offset))
+        }
+
       }
 
       "tracks" -> {
+
         val tracks = spotify.clientAPI.personalization.getTopTracks(timeRange = timeRange, limit = 10).complete()
-        OrderedTracksMessage(tracks, 9e5.toLong(), title).create(context.event.channel)
+
+        PaginatedMessage(tracks, 9e5.toLong(), title) { paging, builder ->
+          builder.setDescription(paging.items.toSimpleNumberedTrackInfo(paging.offset))
+        }
+
       }
 
       else -> throw CommandException("The first argument must either be \"tracks\" or \"artists\"")
 
     }
+
+    message.create(context.event.channel, PaginatedReactionListener(message))
 
   }
 
@@ -201,7 +218,7 @@ class SongFeaturesCommand : Command() {
 @CommandMeta(
   category = Category.SPOTIFY, triggers = ["play-history", "history", "stalk"],
   description = "Displays the tracks the provided user has recently played.",
-  minArgs = 1, args = "<user> <limit>"
+  minArgs = 1, args = "<user>"
 )
 class StalkCommand : Command() {
 
@@ -213,30 +230,181 @@ class StalkCommand : Command() {
       .mapNotNull { getSpotifyClient(it.idLong)?.clientAPI }.firstOrNull()
       ?: throw CommandException("An authenticated user by that name could not be found >:V")
 
-    val limit = if (context.getArgCount() > 1) min(context.arguments.pollFirst().toInt(), 15) else 15
+    val pagingObject = spotify.player.getRecentlyPlayed(limit = 10).complete()
 
-    val embed = EmbedBuilder()
-      .setTitle("$name's Play History")
-      .setColor(Color.WHITE)
-      .setTimestamp(Instant.now())
-      .setFooter("Powered by Spotify", SPOTIFY_ICON)
+    val message = PaginatedMessage(pagingObject, 9e5.toLong(), "$name's Play History") { paging, builder ->
 
-    spotify.player.getRecentlyPlayed(limit = limit).complete()
-      .take(limit)
-      .map { Pair(it.track, it.playedAt.toZonedTime()) }  // Pairs the track with the time it was played
-      .sortedByDescending { it.second }                   // Puts the pairs in descending order (most recent first)
-      .groupBy { it.second.hour }                         // Groups the pairs based on the hour the track was played
-      .forEach { (_, pairs) ->
-        // Places each hour block into its own field
+      paging.items.map { Pair(it.track, it.playedAt.toZonedTime()) }  // Pairs the track with the time it was played
+        .sortedByDescending { it.second }                   // Puts the pairs in descending order (most recent first)
+        .groupBy { it.second.hour }                         // Groups the pairs based on the hour the track was played
+        .forEach { (_, pairs) ->
+          // Places each hour block into its own field
 
-        val title = pairs.first().second.toReadable()
-        val tracks = pairs.map { it.first }.asIterable().toNumberedTrackInfo()
+          val title = pairs.first().second.toReadable()
+          val tracks = pairs.map { it.first }.asIterable().toNumberedTrackInfo()
 
-        embed.addField(title, tracks, false)
+          builder.addField(title, tracks, false)
+
+        }
+
+    }
+
+    message.create(context.event.channel, PaginatedReactionListener(message))
+
+  }
+
+}
+
+@CommandMeta(
+  category = Category.SPOTIFY, triggers = ["player", "control", "remote"], minArgs = 1,
+  description = "Allows the user to control their Spotify playback via commands.",
+  args = "<info/pause/resume/play/repeat/volume/shuffle>", deleteCaller = true
+)
+class PlayerCommand : Command() {
+
+  override suspend fun execute(context: CommandContext) {
+
+    val client = getSpotifyClient(context.event.author.idLong)
+      ?: throw CommandException(NOT_AUTHENTICATED)
+
+    when (val subcommand = context.arguments.pollFirst().toLowerCase()) {
+
+      "play" -> handlePlay(context, client)
+      "pause" -> client.clientAPI.player.pause().complete()
+      "resume" -> client.clientAPI.player.resume().complete()
+
+      "repeat" -> {
+
+        val state = try {
+          ClientPlayerApi.PlayerRepeatState.valueOf(context.arguments.pollFirst())
+        } catch (e: IllegalArgumentException) {
+          throw CommandException("You must provide a repeat state: \"track\", \"context\", or \"off\"")
+        }
+
+        client.clientAPI.player.setRepeatMode(state).complete()
+        context.event.channel.sendMessage("Set repeat mode to ${state.name}").queue()
 
       }
 
-    context.event.channel.sendMessage(embed.build()).queue()
+      "shuffle", "info" -> {
+
+        with(client.clientAPI.player) {
+
+          val playerContext = getCurrentContext().complete()
+            ?: throw CommandException("Could not retrieve playback context >:V")
+
+          if (subcommand == "shuffle") toggleShuffle(!playerContext.shuffleState).complete()
+          else handleInfo(playerContext, context.event.channel)
+
+        }
+
+      }
+
+    }
+
+  }
+
+  private fun handleInfo(context: CurrentlyPlayingContext, channel: MessageChannel) {
+
+    val state = """
+      Device: ${context.device.type.identifier}
+      Shuffle: ${context.shuffleState}
+      Repeat State: ${context.repeatState.name}
+    """.trimIndent()
+
+    val currentlyPlaying = if (context.track == null) "Nothing" else with(context.track!!) {
+
+      """
+        Now Playing: $name on ${album.toAlbumInfo()}
+        Artists: ${artists.toNames()}
+        Popularity: $popularity
+        Progress: ${context.progressMs?.div(durationMs.toFloat())?.toPercent()}
+      """.trimIndent()
+
+    }
+
+    val embed = EmbedBuilder()
+
+    with(embed) {
+
+      setTitle("Playback Context")
+      addField("Playback State", state, false)
+      addField("Currently Playing", currentlyPlaying, false)
+
+      if (context.track != null) setImage(context.track!!.album.images[0].url)
+
+      setColor(Color.WHITE)
+      setTimestamp(Instant.now())
+      setFooter("Powered by Spotify", SPOTIFY_ICON)
+
+    }
+
+    channel.sendMessage(embed.build()).queue()
+
+  }
+
+  @Suppress("UNCHECKED_CAST")
+  private suspend fun handlePlay(context: CommandContext, client: SpotifyClient) {
+
+    if (context.getArgCount() < 2) throw CommandException("You must provide a search type and query >:V")
+
+    val searchAPI = client.clientAPI.search
+    val searchType = context.arguments.pollFirst()
+    val query = context.arguments.joinToString(" ")
+
+    val searchResult: PagingObject<*> = when (searchType) {
+      "track" -> searchAPI.searchTrack(query).complete()
+      "artist" -> searchAPI.searchArtist(query).complete()
+      "album" -> searchAPI.searchAlbum(query).complete()
+      "playlist" -> searchAPI.searchPlaylist(query).complete()
+      else -> throw CommandException("Search type must be one of the following: ${SEARCH_TYPES.joinToString()}")
+    }
+
+    if (searchResult.items.isEmpty()) throw CommandException("There were no search results for that query.")
+
+    val message = PaginatedSelection(searchResult, 9e5.toLong(), "${context.event.author.name}'s Search Results",
+      composer = { pagingObject, builder ->
+
+        val description = when (pagingObject.items[0]) {
+          is Track -> (pagingObject.items as List<Track>).toSimpleNumberedTrackInfo()
+          is Artist -> (pagingObject.items as List<Artist>).toNumberedArtists()
+          is SimpleAlbum -> (pagingObject.items as List<SimpleAlbum>).toNumberedAlbumInfo()
+          else -> (pagingObject.items as List<SimplePlaylist>).toNumberedPlaylistInfo()
+        }
+
+        builder.setDescription(description)
+
+      }, afterSelection = { selection, builder ->
+
+        when (selection) {
+
+          is Track -> {
+            builder.setTitle(selection.toSimpleTrackInfo()); builder.setImage(selection.album.images[0].url)
+            client.clientAPI.player.startPlayback(tracksToPlay = listOf(selection.id)).complete()
+          }
+
+          is Artist -> {
+            builder.setTitle(selection.name); builder.setImage(selection.images[0].url)
+            client.clientAPI.player.startPlayback(artist = selection.id).complete()
+          }
+
+          is SimpleAlbum -> {
+            builder.setTitle(selection.name); builder.setImage(selection.images[0].url)
+            client.clientAPI.player.startPlayback(album = selection.id).complete()
+          }
+
+          else -> with (selection as SimplePlaylist) {
+            builder.setTitle(toPlaylistInfo()); builder.setImage(images[0].url)
+            client.clientAPI.player.startPlayback(playlist = uri).complete()
+          }
+
+        }
+
+        builder.build()
+
+      })
+
+    message.create(context.event.channel, message)
 
   }
 
