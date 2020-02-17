@@ -14,23 +14,18 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent
 import net.dv8tion.jda.api.hooks.SubscribeEvent
 import net.jingles.moosic.SPOTIFY_ICON
-import net.jingles.moosic.toUnicodeEmoji
 import java.awt.Color
 import java.time.Instant
 
 private val SYMBOLS = mapOf(
-  "left" to ":arrow_left:".toUnicodeEmoji(),
-  "right" to ":arrow_right:".toUnicodeEmoji(),
-  "stop" to ":stop:".toUnicodeEmoji()
+  "left" to "\u25C0", "right" to "\u25B6", "stop" to "\u23F9"
 )
 
 private val NUMBERS = mapOf(
-  1 to ":one:".toUnicodeEmoji(), 2 to ":two:".toUnicodeEmoji(),
-  3 to ":three:".toUnicodeEmoji(), 4 to ":four:".toUnicodeEmoji(),
-  5 to ":five:".toUnicodeEmoji(), 6 to ":six".toUnicodeEmoji(),
-  7 to ":seven:".toUnicodeEmoji(), 8 to ":eight:".toUnicodeEmoji(),
-  9 to ":nine:".toUnicodeEmoji(), 9 to ":nine:".toUnicodeEmoji(),
-  10 to ":ten:".toUnicodeEmoji()
+  1 to "1\u20E3", 2 to "2\u20E3", 3 to "3\u20E3",
+  4 to "4\u20E3", 5 to "5\u20E3", 6 to "6\u20E3",
+  7 to "7\u20E3", 8 to "8\u20E3", 9 to "9\u20E3",
+  10 to "\uD83D\uDD1F"
 )
 
 abstract class Menu<T : Any>(
@@ -56,9 +51,9 @@ abstract class Menu<T : Any>(
     val message = channel.sendMessage(render(0)).complete()
 
     with(message) {
-      addReaction(":arrow_left:".toUnicodeEmoji()).queue()
-      addReaction(":stop_button:".toUnicodeEmoji()).queue()
-      addReaction(":arrow_right".toUnicodeEmoji()).queue()
+      addReaction(SYMBOLS["left"]!!).queue()
+      addReaction(SYMBOLS["stop"]!!).queue()
+      addReaction(SYMBOLS["right"]!!).queue()
     }
 
     this.messageId = message.idLong

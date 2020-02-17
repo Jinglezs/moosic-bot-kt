@@ -1,7 +1,6 @@
 package net.jingles.moosic
 
 import com.adamratzman.spotify.models.*
-import com.vdurmont.emoji.EmojiParser
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageChannel
@@ -15,8 +14,6 @@ import java.time.format.FormatStyle
 fun Long.toUser(jda: JDA) = jda.getUserById(this)
 
 fun Long.toMessage(channel: MessageChannel): Message = channel.retrieveMessageById(this).complete()
-
-fun String.toUnicodeEmoji(): String = EmojiParser.parseToUnicode(this)
 
 // Formatting for numbers and dates
 
