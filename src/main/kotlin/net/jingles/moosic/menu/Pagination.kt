@@ -57,7 +57,7 @@ abstract class Menu<T : Any>(
     }
 
     this.messageId = message.idLong
-    this.listeners = arrayOf(listeners)
+    this.listeners = arrayOf(*listeners)
 
     jda = channel.jda
     jda.addEventListener(*listeners)
