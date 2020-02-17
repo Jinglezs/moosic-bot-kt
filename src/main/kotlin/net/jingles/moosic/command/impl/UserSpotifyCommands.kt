@@ -11,6 +11,7 @@ import net.jingles.moosic.command.*
 import net.jingles.moosic.menu.PaginatedMessage
 import net.jingles.moosic.menu.PaginatedReactionListener
 import net.jingles.moosic.menu.PaginatedSelection
+import net.jingles.moosic.menu.SelectionReactionListener
 import net.jingles.moosic.service.SCOPES
 import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
@@ -404,7 +405,7 @@ class PlayerCommand : Command() {
 
       })
 
-    message.create(context.event.channel, message)
+    message.create(context.event.channel, PaginatedReactionListener(message), SelectionReactionListener(message))
 
   }
 

@@ -60,7 +60,7 @@ abstract class Menu<T : Any>(
     this.listeners = arrayOf(listeners)
 
     jda = channel.jda
-    jda.addEventListener(listeners)
+    jda.addEventListener(*listeners)
 
     job = GlobalScope.launch {
       delay(timeout)
@@ -185,7 +185,7 @@ class PaginatedSelection<T : Any>(
 
 }
 
-class PaginatedSelectionReactionListener(private val message: PaginatedSelection<*>) {
+class SelectionReactionListener(private val message: PaginatedSelection<*>) {
 
   @SubscribeEvent
   fun onReactionAdd(event: MessageReactionAddEvent) {
