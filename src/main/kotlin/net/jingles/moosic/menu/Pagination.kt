@@ -81,21 +81,27 @@ class ReactionListener(private val message: PaginatedMessage<*>) {
 
     println("They are the same message too! >:VVV")
 
-    val reaction = event.reactionEmote
-    if (reaction.isEmote) return
+    val reaction = event.reaction.reactionEmote.emoji
 
-    if (reaction.emoji == STOP) {
+    if (reaction == STOP) {
+      println("Stopping reaction listener")
       message.stop(); return
     }
 
-    val direction = when (reaction.emoji) {
+    val direction = when (reaction) {
       LEFT -> -1
       RIGHT -> 1
       else -> 0
     }
 
+    println("Received directional command: $direction")
+
+    event.reaction.removeReaction().queue()
+
     GlobalScope.launch {
-      event.channel.editMessageById(event.messageId, message.render(direction)).queue()
+      event.channel.editMessageById(event.messageId, message.render(direction)).queue {
+        println("Edited the message!")
+      }
     }
 
   }
