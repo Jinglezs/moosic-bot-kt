@@ -26,24 +26,13 @@ private const val STOP = "\u23F9"
 abstract class PaginatedMessage<T : Any>(
   protected val pagingObject: PagingObject<T>,
   protected val title: String,
-  private val timeout: Long,
-  channel: MessageChannel
+  private val timeout: Long
 ) {
 
-  var messageId: Long = 0
-  private val jda: JDA = channel.jda
-  private val job: Job
+  private var messageId: Long = 0
+  private lateinit var jda: JDA
+  private lateinit var job: Job
 
-  init {
-
-    channel.jda.addEventListener(this)
-
-    job = GlobalScope.launch {
-      delay(timeout)
-      stop()
-    }
-
-  }
 
   @SubscribeEvent
   private fun onReactionAdd(event: MessageReactionAddEvent) {
@@ -75,6 +64,28 @@ abstract class PaginatedMessage<T : Any>(
    */
   abstract suspend fun render(direction: Int): MessageEmbed
 
+  suspend fun create(channel: MessageChannel) {
+
+    val message = channel.sendMessage(render(0)).complete()
+
+    with (message) {
+      addReaction(LEFT).queue()
+      addReaction(STOP).queue()
+      addReaction(RIGHT).queue()
+    }
+
+    jda = channel.jda
+    messageId = message.idLong
+
+    jda.addEventListener(this)
+
+    job = GlobalScope.launch {
+      delay(timeout)
+      stop()
+    }
+
+  }
+
   private fun stop() {
 
     job.cancel()
@@ -84,8 +95,8 @@ abstract class PaginatedMessage<T : Any>(
 
 }
 
-class OrderedTracksMessage(tracks: PagingObject<Track>, title: String, timeout: Long, channel: MessageChannel) :
-  PaginatedMessage<Track>(tracks, title, timeout, channel) {
+class OrderedTracksMessage(tracks: PagingObject<Track>, title: String, timeout: Long) :
+  PaginatedMessage<Track>(tracks, title, timeout) {
 
   private val builder = EmbedBuilder()
     .setTitle(title)
@@ -107,8 +118,8 @@ class OrderedTracksMessage(tracks: PagingObject<Track>, title: String, timeout: 
 
 }
 
-class OrderedArtistsMessage(artists: PagingObject<Artist>, title: String, timeout: Long, channel: MessageChannel) :
-  PaginatedMessage<Artist>(artists, title, timeout, channel) {
+class OrderedArtistsMessage(artists: PagingObject<Artist>, title: String, timeout: Long) :
+  PaginatedMessage<Artist>(artists, title, timeout) {
 
   private val builder = EmbedBuilder()
     .setTitle(title)

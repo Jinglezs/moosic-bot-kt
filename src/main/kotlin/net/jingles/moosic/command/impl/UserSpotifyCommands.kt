@@ -7,7 +7,6 @@ import net.jingles.moosic.*
 import net.jingles.moosic.command.*
 import net.jingles.moosic.menu.OrderedArtistsMessage
 import net.jingles.moosic.menu.OrderedTracksMessage
-import net.jingles.moosic.menu.PaginatedMessage
 import net.jingles.moosic.service.SCOPES
 import net.jingles.moosic.service.getSpotifyClient
 import net.jingles.moosic.service.removeSpotifyClient
@@ -89,23 +88,20 @@ class FavoritesCommand : Command() {
     val title = "$name's Favorite ${type.capitalize()} - ${timeRange.name
       .toLowerCase().capitalize().replace("_", " ")}"
 
-    val paginatedMessage: PaginatedMessage<*> = when (type) {
+    when (type) {
 
       "artists" -> {
         val artists = spotify.clientAPI.personalization.getTopArtists(limit = 10).complete()
-        OrderedArtistsMessage(artists, title, 9e5.toLong(), context.event.channel)
+        OrderedArtistsMessage(artists, title, 9e5.toLong()).create(context.event.channel)
       }
 
       "tracks" -> {
         val tracks = spotify.clientAPI.personalization.getTopTracks(limit = 10).complete()
-        OrderedTracksMessage(tracks, title, 9e5.toLong(), context.event.channel)
+        OrderedTracksMessage(tracks, title, 9e5.toLong()).create(context.event.channel)
       }
 
       else -> throw CommandException("The first argument must either be \"tracks\" or \"artists\"")
-    }
 
-    context.event.channel.sendMessage(paginatedMessage.render(0)).queue {
-      paginatedMessage.messageId = it.idLong
     }
 
   }
