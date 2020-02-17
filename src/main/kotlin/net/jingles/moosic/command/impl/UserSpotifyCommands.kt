@@ -92,12 +92,12 @@ class FavoritesCommand : Command() {
 
       "artists" -> {
         val artists = spotify.clientAPI.personalization.getTopArtists(timeRange = timeRange, limit = 10).complete()
-        OrderedArtistsMessage(artists, title, 9e5.toLong()).create(context.event.channel)
+        OrderedArtistsMessage(artists, 9e5.toLong(), title).create(context.event.channel)
       }
 
       "tracks" -> {
         val tracks = spotify.clientAPI.personalization.getTopTracks(timeRange = timeRange, limit = 10).complete()
-        OrderedTracksMessage(tracks, title, 9e5.toLong()).create(context.event.channel)
+        OrderedTracksMessage(tracks, 9e5.toLong(), title).create(context.event.channel)
       }
 
       else -> throw CommandException("The first argument must either be \"tracks\" or \"artists\"")
