@@ -357,10 +357,10 @@ class PlayerCommand : Command() {
     val query = context.arguments.joinToString(" ")
 
     val searchResult: PagingObject<*> = when (searchType) {
-      "track" -> searchAPI.searchTrack(query = query, limit = 5).complete()
-      "artist" -> searchAPI.searchArtist(query = query, limit = 5).complete()
-      "album" -> searchAPI.searchAlbum(query = query, limit = 5).complete()
-      "playlist" -> searchAPI.searchPlaylist(query = query, limit = 5).complete()
+      "track" -> searchAPI.searchTrack(query = query, limit = 3).complete()
+      "artist" -> searchAPI.searchArtist(query = query, limit = 3).complete()
+      "album" -> searchAPI.searchAlbum(query = query, limit = 3).complete()
+      "playlist" -> searchAPI.searchPlaylist(query = query, limit = 3).complete()
       else -> throw CommandException("Search type must be one of the following: ${SEARCH_TYPES.joinToString()}")
     }
 
@@ -426,6 +426,9 @@ class PlayerCommand : Command() {
     }
 
     builder.setTitle(title); builder.setImage(url)
+    // Get rid of anything we aren't interested in
+    builder.setDescription(null); builder.fields.clear()
+
     return builder.build()
 
   }
