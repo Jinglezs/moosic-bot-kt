@@ -29,38 +29,10 @@ abstract class PaginatedMessage<T : Any>(
   private val timeout: Long
 ) {
 
-  private var messageId: Long = 0
+  private lateinit var listener: ReactionListener
   private lateinit var jda: JDA
   private lateinit var job: Job
-
-
-  @SubscribeEvent
-  fun onReactionAdd(event: MessageReactionAddEvent) {
-
-    println("Reaction event received! >:VV")
-
-    if (event.messageIdLong != messageId) return
-
-    println("They are the same message too! >:VVV")
-
-    val reaction = event.reactionEmote
-    if (reaction.isEmote) return
-
-    if (reaction.emoji == STOP) {
-      stop(); return
-    }
-
-    val direction = when (reaction.emoji) {
-      LEFT -> -1
-      RIGHT -> 1
-      else -> 0
-    }
-
-    GlobalScope.launch {
-      event.channel.editMessageById(event.messageId, render(direction)).queue()
-    }
-
-  }
+  var messageId: Long = 0
 
   /**
    * Draws the items of either the current, previous, or next page.
@@ -81,7 +53,8 @@ abstract class PaginatedMessage<T : Any>(
     jda = channel.jda
     messageId = message.idLong
 
-    jda.addEventListener(this)
+    listener = ReactionListener(this)
+    jda.addEventListener(listener)
 
     job = GlobalScope.launch {
       delay(timeout)
@@ -90,10 +63,40 @@ abstract class PaginatedMessage<T : Any>(
 
   }
 
-  private fun stop() {
-
+  fun stop() {
     job.cancel()
-    jda.removeEventListener(this)
+    jda.removeEventListener(listener)
+  }
+
+}
+
+class ReactionListener(private val message: PaginatedMessage<*>) {
+
+  @SubscribeEvent
+  fun onReactionAdd(event: MessageReactionAddEvent) {
+
+    println("Reaction event received! >:VV")
+
+    if (event.messageIdLong != message.messageId) return
+
+    println("They are the same message too! >:VVV")
+
+    val reaction = event.reactionEmote
+    if (reaction.isEmote) return
+
+    if (reaction.emoji == STOP) {
+      message.stop(); return
+    }
+
+    val direction = when (reaction.emoji) {
+      LEFT -> -1
+      RIGHT -> 1
+      else -> 0
+    }
+
+    GlobalScope.launch {
+      event.channel.editMessageById(event.messageId, message.render(direction)).queue()
+    }
 
   }
 
