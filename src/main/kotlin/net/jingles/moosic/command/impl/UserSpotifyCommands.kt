@@ -277,11 +277,21 @@ class PlayerCommand : Command() {
       "pause" -> client.clientAPI.player.pause().complete()
       "resume" -> client.clientAPI.player.resume().complete()
 
+      "volume" -> {
+
+        val volume = context.arguments.pollFirst()?.toInt()
+          ?: throw CommandException("You must specify a new volume between 0 and 100.")
+
+        client.clientAPI.player.setVolume(volume).complete()
+        context.event.channel.sendMessage("The playback volume is now $volume").queue()
+
+      }
+
       "repeat" -> {
 
         val state = try {
-          ClientPlayerApi.PlayerRepeatState.valueOf(context.arguments.pollFirst())
-        } catch (e: IllegalArgumentException) {
+          ClientPlayerApi.PlayerRepeatState.valueOf(context.arguments.pollFirst().toUpperCase())
+        } catch (e: Exception) {
           throw CommandException("You must provide a repeat state: \"track\", \"context\", or \"off\"")
         }
 
@@ -297,8 +307,13 @@ class PlayerCommand : Command() {
           val playerContext = getCurrentContext().complete()
             ?: throw CommandException("Could not retrieve playback context >:V")
 
-          if (subcommand == "shuffle") toggleShuffle(!playerContext.shuffleState).complete()
-          else handleInfo(playerContext, context.event.channel)
+          if (subcommand == "shuffle") {
+
+            val newState = !playerContext.shuffleState
+            toggleShuffle(newState).complete()
+            context.event.channel.sendMessage("Shuffle has been set to $newState").queue()
+
+          } else handleInfo(playerContext, context.event.channel)
 
         }
 

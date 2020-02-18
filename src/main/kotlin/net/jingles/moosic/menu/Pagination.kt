@@ -1,5 +1,6 @@
 package net.jingles.moosic.menu
 
+import com.adamratzman.spotify.SpotifyException
 import com.adamratzman.spotify.models.AbstractPagingObject
 import com.adamratzman.spotify.models.CursorBasedPagingObject
 import kotlinx.coroutines.GlobalScope
@@ -106,10 +107,16 @@ open class PaginatedMessage<T : Any>(
    */
   override suspend fun render(direction: Int?): MessageEmbed {
 
-    pagingObject = when (direction) {
-      -1 -> if (pagingObject.previous != null) pagingObject.getPrevious()!! else pagingObject
-      1 -> if (pagingObject.next != null) pagingObject.getNext()!! else pagingObject
-      else -> pagingObject
+    try {
+
+      pagingObject = when (direction) {
+        -1 -> if (pagingObject.previous != null) pagingObject.getPrevious()!! else pagingObject
+        1 -> if (pagingObject.next != null) pagingObject.getNext()!! else pagingObject
+        else -> pagingObject
+      }
+
+    } catch (e: SpotifyException.ParseException) {
+      println("${pagingObject.javaClass.simpleName}: Unable to parse the next paging object.")
     }
 
     composer.invoke(pagingObject, builder)
