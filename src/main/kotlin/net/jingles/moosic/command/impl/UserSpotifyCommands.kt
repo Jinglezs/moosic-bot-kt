@@ -395,7 +395,7 @@ class PlayerCommand : Command() {
     val message = PaginatedSelection(searchResult, 6e4.toLong(), "${context.event.author.name}'s Search Results",
       composer = {
 
-        val boldIndex = pagingObject.offset + currentSelection - 1
+        val boldIndex = currentSelection - 1
 
         val description = when (options[0]) {
           is Track -> (options as List<Track>).toNumbered(pagingObject.offset, boldIndex) { toSimpleTrackInfo() }

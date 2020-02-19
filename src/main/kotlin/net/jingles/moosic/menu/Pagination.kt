@@ -86,7 +86,7 @@ abstract class Menu<T : Any>(
       else -> null
     } ?: return
 
-    message.reactions.forEach { it.removeReaction() }
+    message.reactions.forEach { it.removeReaction().queue() }
 
   }
 
@@ -213,13 +213,27 @@ class PaginatedSelection<T : Any>(
       val newSelection = currentSelection + direction!!
 
       when {
-        newSelection < 1 -> pagingObject.getPrevious() ?: pagingObject
-        newSelection > pagingObject.limit -> pagingObject.getNext() ?: pagingObject
-        else -> pagingObject
+
+        newSelection < 1 -> {
+          currentSelection = pagingObject.limit
+          pagingObject.getPrevious() ?: pagingObject
+        }
+
+        newSelection > pagingObject.limit -> {
+          currentSelection = 1
+          pagingObject.getNext() ?: pagingObject
+        }
+
+        else -> {
+          currentSelection = newSelection
+          pagingObject
+        }
+
       }
 
+
     } catch (exception: SpotifyException) {
-      println("${pagingObject.javaClass.simpleName}: Unable to parse the next paging object.")
+      println("${pagingObject.javaClass.simpleName}: Unable to parse the previous/next paging object.")
       pagingObject
     }
 
