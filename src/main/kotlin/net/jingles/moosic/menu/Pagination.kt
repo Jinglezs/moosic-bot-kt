@@ -274,7 +274,7 @@ class SelectionReactionListener(private val message: PaginatedSelection<out Any>
     }
 
     if (direction == 0) {
-      message.onSelection(direction)
+      message.onSelection(message.currentSelection - 1)
       return
     }
 
