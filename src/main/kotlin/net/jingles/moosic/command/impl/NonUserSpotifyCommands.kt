@@ -5,6 +5,7 @@ import com.adamratzman.spotify.utils.Market
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.*
 import net.jingles.moosic.command.*
+import net.jingles.moosic.menu.ImageSlideshow
 import java.awt.Color
 import java.time.Instant
 
@@ -56,7 +57,7 @@ class ArtistInfoCommand : Command() {
       Popularity: ${artist.popularity}
     """.trimIndent()
 
-    val embed = EmbedBuilder()
+    val builder = EmbedBuilder()
       .setTitle(artist.name)
       .addField("Albums", albums, true)
       .addField("General Info", info, true)
@@ -64,9 +65,8 @@ class ArtistInfoCommand : Command() {
       .setColor(Color.WHITE)
       .setTimestamp(Instant.now())
       .setFooter("Powered by Spotify", SPOTIFY_ICON)
-      .build()
 
-    context.event.channel.sendMessage(embed).queue()
+    ImageSlideshow(builder, artist.images.map { it.url }).create(context.event.channel, 3e5.toLong())
 
   }
 

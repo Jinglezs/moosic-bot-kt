@@ -10,9 +10,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import net.jingles.moosic.*
 import net.jingles.moosic.command.*
 import net.jingles.moosic.menu.PaginatedMessage
-import net.jingles.moosic.menu.PaginatedReactionListener
 import net.jingles.moosic.menu.PaginatedSelection
-import net.jingles.moosic.menu.SelectionReactionListener
 import net.jingles.moosic.service.SCOPES
 import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
@@ -121,7 +119,7 @@ class FavoritesCommand : Command() {
 
     }
 
-    message.create(context.event.channel, PaginatedReactionListener(message))
+    message.create(context.event.channel)
 
   }
 
@@ -234,11 +232,16 @@ class StalkCommand : Command() {
 
     val pagingObject = spotify.player.getRecentlyPlayed(limit = 10).complete()
 
-    val message = PaginatedMessage(pagingObject, 9e5.toLong(), "$name's Play History") {
+    PaginatedMessage(pagingObject, 9e5.toLong(), "$name's Play History") {
 
       builder.fields.clear() // Clear the fields from the previous page
 
-      pagingObject.items.map { Pair(it.track, it.playedAt.toZonedTime()) }  // Pairs the track with the time it was played
+      pagingObject.items.map {
+        Pair(
+          it.track,
+          it.playedAt.toZonedTime()
+        )
+      }  // Pairs the track with the time it was played
         .sortedByDescending { it.second }                   // Puts the pairs in descending order (most recent first)
         .groupBy { it.second.hour }                         // Groups the pairs based on the hour the track was played
         .forEach { (_, pairs) ->
@@ -251,9 +254,7 @@ class StalkCommand : Command() {
 
         }
 
-    }
-
-    message.create(context.event.channel, PaginatedReactionListener(message))
+    }.create(context.event.channel)
 
   }
 
@@ -392,7 +393,7 @@ class PlayerCommand : Command() {
 
     }
 
-    val message = PaginatedSelection(searchResult, 6e4.toLong(), "${context.event.author.name}'s Search Results",
+    PaginatedSelection(searchResult, 6e4.toLong(), "${context.event.author.name}'s Search Results",
       composer = {
 
         val boldIndex = currentSelection - 1
@@ -407,8 +408,7 @@ class PlayerCommand : Command() {
         builder.setDescription(description)
 
       }, afterSelection = { selection -> playSelection(client, selection, builder) })
-
-    message.create(context.event.channel, SelectionReactionListener(message))
+      .create(context.event.channel)
 
   }
 

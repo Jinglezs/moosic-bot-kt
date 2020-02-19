@@ -46,20 +46,18 @@ abstract class Menu<T : Any>(
 
   private lateinit var jda: JDA
   private lateinit var job: Job
-  private lateinit var listeners: Array<Any>
   private lateinit var channel: Pair<Long, ChannelType>
   internal var messageId: Long = 0
 
-  open suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
+  open suspend fun create(channel: MessageChannel): Message {
 
     val message = channel.sendMessage(render(0)).complete()
 
     this.channel = Pair(channel.idLong, channel.type)
     this.messageId = message.idLong
-    this.listeners = arrayOf(*listeners)
 
     jda = channel.jda
-    jda.addEventListener(*listeners)
+    jda.addEventListener(this)
 
     job = GlobalScope.launch {
       delay(timeout)
@@ -78,7 +76,7 @@ abstract class Menu<T : Any>(
   open fun stop() {
 
     job.cancel()
-    jda.removeEventListener(*listeners)
+    jda.removeEventListener(this)
 
     val message = when (channel.second) {
       ChannelType.TEXT -> jda.getTextChannelById(channel.first)?.retrieveMessageById(messageId)?.complete()
@@ -99,9 +97,9 @@ open class PaginatedMessage<T : Any>(
   composer: PaginatedMessage<T>.() -> Unit
 ) : Menu<T>(pagingObject, timeout, title, composer as Menu<T>.() -> Unit) {
 
-  override suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
+  override suspend fun create(channel: MessageChannel): Message {
 
-    with(super.create(channel, *listeners)) {
+    with(super.create(channel)) {
 
       if (pagingObject !is CursorBasedPagingObject) addReaction(SYMBOLS["left"]!!).queue()
       addReaction(SYMBOLS["stop"]!!).queue()
@@ -136,38 +134,17 @@ open class PaginatedMessage<T : Any>(
 
   }
 
-}
-
-/**
- * A reaction listener for the default PaginatedMessage in which clicking the
- * left arrow displays the previous set of items from the PagingObject, the
- * right displays the next set of items, and stop unregisters the listener.
- */
-class PaginatedReactionListener(private val message: Menu<out Any>) {
-
   @SubscribeEvent
   fun onReactionAdd(event: MessageReactionAddEvent) {
 
-    if (event.messageIdLong != message.messageId || event.user?.isBot == true) return
+    val direction = handleReactionEvent(event)
 
-    val reaction = event.reaction.reactionEmote.emoji
-
-    if (reaction == SYMBOLS["stop"]) {
-      message.stop(); return
-    }
-
-    val direction = when (reaction) {
-      SYMBOLS["left"], SYMBOLS["up"] -> -1
-      SYMBOLS["right"], SYMBOLS["down"] -> 1
-      else -> 0
-    }
-
-    if (event.channelType != ChannelType.PRIVATE) {
-      event.user?.let { event.reaction.removeReaction(it).queue() }
+    if (direction == 0) {
+      stop(); return
     }
 
     GlobalScope.launch {
-      event.channel.editMessageById(event.messageId, message.render(direction)).queue()
+      event.channel.editMessageById(event.messageId, render(direction)).queue()
     }
 
   }
@@ -189,12 +166,12 @@ class PaginatedSelection<T : Any>(
   internal val options = mutableListOf<T>()
   internal var currentSelection: Int = 1
 
-  override suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
+  override suspend fun create(channel: MessageChannel): Message {
 
     if (pagingObject.limit > 10)
       throw IllegalArgumentException("The paging object's limit must be 10 items or less.")
 
-    with(super.create(channel, *listeners)) {
+    with(super.create(channel)) {
 
       addReaction(SYMBOLS["up"]!!).queue()
       addReaction(SYMBOLS["down"]!!).queue()
@@ -245,45 +222,88 @@ class PaginatedSelection<T : Any>(
 
   }
 
-  fun onSelection(selection: Int): MessageEmbed {
-
-    val selected: T = pagingObject[selection]
-    stop()
-
-    return afterSelection.invoke(this, selected)
-
-  }
-
-}
-
-class SelectionReactionListener(private val message: PaginatedSelection<out Any>) {
-
   @SubscribeEvent
   fun onReactionAdd(event: MessageReactionAddEvent) {
 
-    if (event.messageIdLong != message.messageId || event.user?.isBot == true) return
+    if (event.messageIdLong != messageId || event.user?.isBot == true) return
 
-    val direction = when (event.reaction.reactionEmote.emoji) {
-      SYMBOLS["up"] -> -1
-      SYMBOLS["down"] -> 1
-      else -> 0
-    }
-
-    if (event.channelType != ChannelType.PRIVATE) {
-      event.user?.let { event.reaction.removeReaction(it).queue() }
-    }
+    val direction = handleReactionEvent(event)
 
     GlobalScope.launch {
 
       val embed = when(direction) {
-        -1, 1 -> message.render(direction)
-        else -> message.onSelection(message.currentSelection - 1)
+        -1, 1 -> render(direction)
+        else -> {
+          stop()
+          afterSelection.invoke(this@PaginatedSelection, pagingObject[currentSelection - 1])
+        }
       }
 
       event.channel.editMessageById(event.messageId, embed).queue()
 
     }
 
+  }
+
+}
+
+class ImageSlideshow(private val builder: EmbedBuilder, private val images: List<String>) {
+
+  private var messageId: Long = 0
+  private var index = 0
+
+  fun create(channel: MessageChannel, timeout: Long) {
+
+    if (images.isEmpty()) throw IllegalStateException("The provided image url list is empty.")
+
+    builder.setImage(images[0])
+
+    with (channel.sendMessage(builder.build()).complete()) {
+      messageId = idLong
+      addReaction(SYMBOLS["left"]!!).queue()
+      addReaction(SYMBOLS["right"]!!).queue()
+    }
+
+    channel.jda.addEventListener(this)
+
+    GlobalScope.launch {
+      delay(timeout)
+      channel.jda.removeEventListener(this)
+    }
+
+  }
+
+  @SubscribeEvent
+  fun onReactionAdd(event: MessageReactionAddEvent) {
+
+    if (event.messageIdLong != messageId || event.user?.isBot == true) return
+
+    index += handleReactionEvent(event)
+
+    when {
+      index > images.size -> index = 0
+      index < 0 -> index = 0
+    }
+
+    builder.setImage(images[index])
+    event.channel.editMessageById(messageId, builder.build()).queue()
+
+  }
+
+}
+
+private fun handleReactionEvent(event: MessageReactionAddEvent): Int {
+
+  val reaction = event.reaction.reactionEmote.emoji
+
+  if (event.channelType != ChannelType.PRIVATE) {
+    event.user?.let { event.reaction.removeReaction(it).queue() }
+  }
+
+  return when (reaction) {
+    SYMBOLS["left"], SYMBOLS["up"] -> -1
+    SYMBOLS["right"], SYMBOLS["Down"] -> 1
+    else -> 0
   }
 
 }
