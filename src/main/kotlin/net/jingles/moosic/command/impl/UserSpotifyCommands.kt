@@ -263,7 +263,7 @@ class StalkCommand : Command() {
 @CommandMeta(
   category = Category.SPOTIFY, triggers = ["player", "control", "remote"], minArgs = 1,
   description = "Allows the user to control their Spotify playback via commands.",
-  args = "<info/pause/resume/play/repeat/volume/shuffle>", deleteCaller = true
+  args = "<info/pause/resume/play/repeat/volume/shuffle>"
 )
 class PlayerCommand : Command() {
 

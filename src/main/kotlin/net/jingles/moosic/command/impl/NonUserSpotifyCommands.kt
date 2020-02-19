@@ -51,8 +51,8 @@ class ArtistInfoCommand : Command() {
 
     val embed = EmbedBuilder()
       .setTitle(artist.name)
-      .addField("General Info", info, true)
       .addField("Top Tracks", topTracks, true)
+      .addField("General Info", info, true)
       .setImage(artist.images[0].url)
       .setColor(Color.WHITE)
       .setTimestamp(Instant.now())
