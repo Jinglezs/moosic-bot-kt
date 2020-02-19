@@ -9,13 +9,15 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
+private const val BOLD = "**%s**"
+
 // Conversions to Discord objects
 
 fun Long.toUser(jda: JDA) = jda.getUserById(this)
 
 fun Long.toMessage(channel: MessageChannel): Message = channel.retrieveMessageById(this).complete()
 
-// Formatting for numbers and dates
+// Formatting for dates, numbers, and Strings
 
 fun Int.format() = "%,d".format(this)
 
@@ -29,33 +31,24 @@ fun String.toZonedTime(): ZonedDateTime = ZonedDateTime.parse(this, DateTimeForm
 
 fun ZonedDateTime.toReadable(): String = this.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL))
 
+fun String.boldOnIndex(index: Int, bold: Int) = if (index == bold) String.format(BOLD, this) else this
+
 // Conversion from Spotify objects to readable Strings
 
+inline fun <T> Iterable<T>.toNumbered(offset: Int = 0, bold: Int = -1, composer: T.() -> String) =
+  mapIndexed { index, element ->
+    "${index + offset + 1}. ${composer.invoke(element).boldOnIndex(index, bold)}"
+  }.joinToString("\n")
+
+inline fun <T> Iterable<T>.toUnnumbered(crossinline composer: T.() -> String) =
+  joinToString("\n") { composer.invoke(it) }
+
 fun Iterable<SimpleArtist>.toNames() = joinToString { it.name }
-
-fun Iterable<Artist>.toSimpleNames() = joinToString { it.name }
-
-fun Iterable<Artist>.toNumberedArtists(offset: Int = 0) =
-  mapIndexed { index, artist -> "${index + offset + 1}. ${artist.name}" }.joinToString("\n")
 
 fun SimpleTrack.toTrackInfo() = "$name by ${artists.toNames()}"
 
 fun Track.toSimpleTrackInfo() = "$name by ${artists.toNames()}"
 
-fun Iterable<SimpleTrack>.toNumberedTrackInfo(offset: Int = 0) =
-  mapIndexed { index, track -> "${index + offset + 1}. ${track.toTrackInfo()}" }.joinToString("\n")
-
-fun Iterable<Track>.toSimpleNumberedTrackInfo(offset: Int = 0) =
-  mapIndexed { index, track -> "${index + offset + 1}. ${track.toSimpleTrackInfo()}" }.joinToString("\n")
-
 fun SimpleAlbum.toAlbumInfo() = "$name by ${artists.toNames()}"
 
-fun Iterable<SimpleAlbum>.toAlbumInfo() = joinToString("\n") { it.toAlbumInfo() }
-
-fun Iterable<SimpleAlbum>.toNumberedAlbumInfo(offset: Int = 0) =
-  mapIndexed { index, album -> "${index + offset + 1}. ${album.toAlbumInfo()}" }.joinToString("\n")
-
 fun SimplePlaylist.toPlaylistInfo() = "$name by ${owner.displayName} (${tracks.total} Tracks)"
-
-fun Iterable<SimplePlaylist>.toNumberedPlaylistInfo(offset: Int = 0) =
-  mapIndexed { index, playlist -> "${index + offset + 1}. ${playlist.toPlaylistInfo()}" }.joinToString("\n")

@@ -12,7 +12,9 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.net.URI
+import java.util.*
 import javax.security.auth.login.LoginException
+import kotlin.concurrent.timerTask
 
 
 const val SPOTIFY_ICON = "https://developer.spotify.com/assets/branding-guidelines/icon2@2x.png"
@@ -53,7 +55,11 @@ open class MoosicBot {
       val secret = System.getenv("spotify_client_secret")
 
       credentials = SpotifyCredentials(token, secret, "http://moosic-bot-kt.herokuapp.com")
-      spotify = SpotifyAppApiBuilder(credentials).build()
+
+      // Refresh the token every 55 minutes
+      Timer().schedule(timerTask {
+        spotify = SpotifyAppApiBuilder(credentials).build()
+      }, 0, 33e5.toLong())
 
     }
 

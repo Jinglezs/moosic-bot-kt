@@ -101,8 +101,8 @@ class FavoritesCommand : Command() {
 
         val artists = spotify.clientAPI.personalization.getTopArtists(timeRange = timeRange, limit = 10).complete()
 
-        PaginatedMessage(artists, 9e5.toLong(), title) { paging, builder ->
-          builder.setDescription(paging.items.toNumberedArtists(paging.offset))
+        PaginatedMessage(artists, 9e5.toLong(), title) {
+          builder.setDescription(pagingObject.items.toNumbered(pagingObject.offset) { this.name })
         }
 
       }
@@ -111,8 +111,8 @@ class FavoritesCommand : Command() {
 
         val tracks = spotify.clientAPI.personalization.getTopTracks(timeRange = timeRange, limit = 10).complete()
 
-        PaginatedMessage(tracks, 9e5.toLong(), title) { paging, builder ->
-          builder.setDescription(paging.items.toSimpleNumberedTrackInfo(paging.offset))
+        PaginatedMessage(tracks, 9e5.toLong(), title) {
+          builder.setDescription(pagingObject.items.toNumbered(pagingObject.offset) { toSimpleTrackInfo() })
         }
 
       }
@@ -148,7 +148,7 @@ class RecommendationsCommand : Command() {
       seedTracks = seedTracks,
       seedArtists = seedArtists,
       limit = 10
-    ).complete().tracks.toSimpleNumberedTrackInfo()
+    ).complete().tracks.toNumbered { toSimpleTrackInfo() }
 
     val embed = EmbedBuilder()
       .setTitle("Recommended Tracks from ${current.name}")
@@ -234,18 +234,18 @@ class StalkCommand : Command() {
 
     val pagingObject = spotify.player.getRecentlyPlayed(limit = 10).complete()
 
-    val message = PaginatedMessage(pagingObject, 9e5.toLong(), "$name's Play History") { paging, builder ->
+    val message = PaginatedMessage(pagingObject, 9e5.toLong(), "$name's Play History") {
 
       builder.fields.clear() // Clear the fields from the previous page
 
-      paging.items.map { Pair(it.track, it.playedAt.toZonedTime()) }  // Pairs the track with the time it was played
+      pagingObject.items.map { Pair(it.track, it.playedAt.toZonedTime()) }  // Pairs the track with the time it was played
         .sortedByDescending { it.second }                   // Puts the pairs in descending order (most recent first)
         .groupBy { it.second.hour }                         // Groups the pairs based on the hour the track was played
         .forEach { (_, pairs) ->
           // Places each hour block into its own field
 
           val title = pairs.first().second.toReadable()
-          val tracks = pairs.map { it.first }.asIterable().toNumberedTrackInfo()
+          val tracks = pairs.map { it.first }.toNumbered(pagingObject.offset) { toTrackInfo() }
 
           builder.addField(title, tracks, false)
 
@@ -371,7 +371,7 @@ class PlayerCommand : Command() {
     val searchType = context.arguments.pollFirst()
     val query = context.arguments.joinToString(" ")
 
-    val searchResult: PagingObject<*> = when (searchType) {
+    val searchResult: PagingObject<out CoreObject> = when (searchType) {
       "track" -> searchAPI.searchTrack(query = query, limit = 3).complete()
       "artist" -> searchAPI.searchArtist(query = query, limit = 3).complete()
       "album" -> searchAPI.searchAlbum(query = query, limit = 3).complete()
@@ -393,24 +393,26 @@ class PlayerCommand : Command() {
     }
 
     val message = PaginatedSelection(searchResult, 6e4.toLong(), "${context.event.author.name}'s Search Results",
-      composer = { pagingObject, builder ->
+      composer = {
 
-        val description = when (pagingObject.items[0]) {
-          is Track -> (pagingObject.items as List<Track>).toSimpleNumberedTrackInfo()
-          is Artist -> (pagingObject.items as List<Artist>).toNumberedArtists()
-          is SimpleAlbum -> (pagingObject.items as List<SimpleAlbum>).toNumberedAlbumInfo()
-          else -> (pagingObject.items as List<SimplePlaylist>).toNumberedPlaylistInfo()
+        val boldIndex = pagingObject.offset + currentSelection - 1
+
+        val description = when (options[0]) {
+          is Track -> (options as List<Track>).toNumbered(pagingObject.offset, boldIndex) { toSimpleTrackInfo() }
+          is Artist -> (options as List<Artist>).toNumbered(pagingObject.offset, boldIndex) { name }
+          is SimpleAlbum -> (options as List<SimpleAlbum>).toNumbered(pagingObject.offset, boldIndex) { toAlbumInfo() }
+          else -> (options as List<SimplePlaylist>).toNumbered(pagingObject.offset, boldIndex) { toPlaylistInfo() }
         }
 
         builder.setDescription(description)
 
-      }, afterSelection = { selection, builder -> playSelection(client, selection, builder) })
+      }, afterSelection = { selection -> playSelection(client, selection, builder) })
 
     message.create(context.event.channel, PaginatedReactionListener(message), SelectionReactionListener(message))
 
   }
 
-  private fun playSelection(client: SpotifyClient, selection: Any, builder: EmbedBuilder): MessageEmbed {
+  private fun playSelection(client: SpotifyClient, selection: CoreObject, builder: EmbedBuilder): MessageEmbed {
 
     val playerApi = client.clientAPI.player
     var title = "Now Playing: "

@@ -20,7 +20,8 @@ import java.awt.Color
 import java.time.Instant
 
 private val SYMBOLS = mapOf(
-  "left" to "\u25C0", "right" to "\u25B6", "stop" to "\u23F9"
+  "left" to "\u25C0", "right" to "\u25B6", "stop" to "\u23F9",
+  "up" to "\u2B06", "down" to "\u2B07", "check" to "\u2611"
 )
 
 private val NUMBERS = mapOf(
@@ -31,13 +32,13 @@ private val NUMBERS = mapOf(
 )
 
 abstract class Menu<T : Any>(
-  protected var pagingObject: AbstractPagingObject<T>,
+  internal var pagingObject: AbstractPagingObject<T>,
   private val timeout: Long,
   title: String,
-  protected val composer: (AbstractPagingObject<T>, EmbedBuilder) -> Unit
+  protected val composer: Menu<T>.() -> Unit
 ) {
 
-  protected val builder = EmbedBuilder()
+  internal val builder = EmbedBuilder()
     .setTitle(title)
     .setColor(Color.WHITE)
     .setFooter("Powered by Spotify", SPOTIFY_ICON)
@@ -46,12 +47,14 @@ abstract class Menu<T : Any>(
   private lateinit var jda: JDA
   private lateinit var job: Job
   private lateinit var listeners: Array<Any>
+  private lateinit var channel: Pair<Long, ChannelType>
   internal var messageId: Long = 0
 
   open suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
 
     val message = channel.sendMessage(render(0)).complete()
 
+    this.channel = Pair(channel.idLong, channel.type)
     this.messageId = message.idLong
     this.listeners = arrayOf(*listeners)
 
@@ -73,8 +76,18 @@ abstract class Menu<T : Any>(
    * Unregisters the event listener and cancels the timeout job
    */
   open fun stop() {
+
     job.cancel()
     jda.removeEventListener(*listeners)
+
+    val message = when (channel.second) {
+      ChannelType.TEXT -> jda.getTextChannelById(channel.first)?.retrieveMessageById(messageId)?.complete()
+      ChannelType.PRIVATE -> jda.getPrivateChannelById(channel.first)?.retrieveMessageById(messageId)?.complete()
+      else -> null
+    } ?: return
+
+    message.reactions.forEach { it.removeReaction() }
+
   }
 
 }
@@ -83,16 +96,15 @@ open class PaginatedMessage<T : Any>(
   pagingObject: AbstractPagingObject<T>,
   timeout: Long,
   title: String,
-  private val stopButton: Boolean = true,
-  composer: (AbstractPagingObject<T>, EmbedBuilder) -> Unit
-) : Menu<T>(pagingObject, timeout, title, composer) {
+  composer: PaginatedMessage<T>.() -> Unit
+) : Menu<T>(pagingObject, timeout, title, composer as Menu<T>.() -> Unit) {
 
   override suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
 
     with(super.create(channel, *listeners)) {
 
-      if (pagingObject !is CursorBasedPagingObject)  addReaction(SYMBOLS["left"]!!).queue()
-      if (stopButton) addReaction(SYMBOLS["stop"]!!).queue()
+      if (pagingObject !is CursorBasedPagingObject) addReaction(SYMBOLS["left"]!!).queue()
+      addReaction(SYMBOLS["stop"]!!).queue()
       addReaction(SYMBOLS["right"]!!).queue()
 
       return this
@@ -115,11 +127,11 @@ open class PaginatedMessage<T : Any>(
         else -> pagingObject
       }
 
-    } catch (e: SpotifyException.ParseException) {
+    } catch (e: SpotifyException) {
       println("${pagingObject.javaClass.simpleName}: Unable to parse the next paging object.")
     }
 
-    composer.invoke(pagingObject, builder)
+    composer.invoke(this)
     return builder.build()
 
   }
@@ -131,7 +143,7 @@ open class PaginatedMessage<T : Any>(
  * left arrow displays the previous set of items from the PagingObject, the
  * right displays the next set of items, and stop unregisters the listener.
  */
-class PaginatedReactionListener(private val message: PaginatedMessage<*>) {
+class PaginatedReactionListener(private val message: Menu<out Any>) {
 
   @SubscribeEvent
   fun onReactionAdd(event: MessageReactionAddEvent) {
@@ -145,8 +157,8 @@ class PaginatedReactionListener(private val message: PaginatedMessage<*>) {
     }
 
     val direction = when (reaction) {
-      SYMBOLS["left"] -> -1
-      SYMBOLS["right"] -> 1
+      SYMBOLS["left"], SYMBOLS["up"] -> -1
+      SYMBOLS["right"], SYMBOLS["down"] -> 1
       else -> 0
     }
 
@@ -170,24 +182,52 @@ class PaginatedSelection<T : Any>(
   pagingObject: AbstractPagingObject<T>,
   timeout: Long,
   title: String,
-  composer: (AbstractPagingObject<T>, EmbedBuilder) -> Unit,
-  private val afterSelection: (T, EmbedBuilder) -> MessageEmbed
-) : PaginatedMessage<T>(pagingObject, timeout, title, false, composer) {
+  composer: PaginatedSelection<T>.() -> Unit,
+  private val afterSelection: Menu<T>.(T) -> MessageEmbed
+) : Menu<T>(pagingObject, timeout, title, composer as Menu<T>.() -> Unit) {
+
+  internal val options = mutableListOf<T>()
+  internal var currentSelection: Int = 1
 
   override suspend fun create(channel: MessageChannel, vararg listeners: Any): Message {
 
     if (pagingObject.limit > 10)
       throw IllegalArgumentException("The paging object's limit must be 10 items or less.")
 
-    with (super.create(channel, *listeners)) {
+    with(super.create(channel, *listeners)) {
 
-      for  (index in 1..pagingObject.limit) {
-        addReaction(NUMBERS[index]!!).queue()
-      }
+      addReaction(SYMBOLS["up"]!!).queue()
+      addReaction(SYMBOLS["down"]!!).queue()
+      addReaction(SYMBOLS["play"]!!).queue()
 
       return this
 
     }
+
+  }
+
+  override suspend fun render(direction: Int?): MessageEmbed {
+
+    pagingObject = try {
+
+      val newSelection = currentSelection + direction!!
+
+      when {
+        newSelection < 1 -> pagingObject.getPrevious() ?: pagingObject
+        newSelection > pagingObject.limit -> pagingObject.getNext() ?: pagingObject
+        else -> pagingObject
+      }
+
+    } catch (exception: SpotifyException) {
+      println("${pagingObject.javaClass.simpleName}: Unable to parse the next paging object.")
+      pagingObject
+    }
+
+    options.clear()
+    options.addAll(pagingObject.items)
+
+    composer.invoke(this)
+    return builder.build()
 
   }
 
@@ -196,28 +236,36 @@ class PaginatedSelection<T : Any>(
     val selected: T = pagingObject[selection]
     stop()
 
-    return afterSelection.invoke(selected, builder)
+    return afterSelection.invoke(this, selected)
 
   }
 
 }
 
-class SelectionReactionListener(private val message: PaginatedSelection<*>) {
+class SelectionReactionListener(private val message: PaginatedSelection<out Any>) {
 
   @SubscribeEvent
   fun onReactionAdd(event: MessageReactionAddEvent) {
 
     if (event.messageIdLong != message.messageId || event.user?.isBot == true) return
 
-    val reaction = event.reaction.reactionEmote.emoji
+    val direction = when (event.reaction.reactionEmote.emoji) {
+      SYMBOLS["up"] -> -1
+      SYMBOLS["down"] -> 1
+      else -> 0
+    }
 
-    val numericalValue = NUMBERS.entries
-      .firstOrNull { it.component2() == reaction }?.key?.minus(1)
+    if (event.channelType != ChannelType.PRIVATE) {
+      event.user?.let { event.reaction.removeReaction(it).queue() }
+    }
 
-    if (numericalValue != null) {
-      GlobalScope.launch {
-        event.channel.editMessageById(event.messageId, message.onSelection(numericalValue)).queue()
-      }
+    if (direction == 0) {
+      message.onSelection(direction)
+      return
+    }
+
+    GlobalScope.launch {
+      event.channel.editMessageById(event.messageId, message.render(direction)).queue()
     }
 
   }

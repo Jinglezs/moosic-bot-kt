@@ -3,11 +3,8 @@ package net.jingles.moosic.command.impl
 import com.adamratzman.spotify.endpoints.public.ArtistApi
 import com.adamratzman.spotify.utils.Market
 import net.dv8tion.jda.api.EmbedBuilder
-import net.jingles.moosic.SPOTIFY_ICON
+import net.jingles.moosic.*
 import net.jingles.moosic.command.*
-import net.jingles.moosic.format
-import net.jingles.moosic.spotify
-import net.jingles.moosic.toAlbumInfo
 import java.awt.Color
 import java.time.Instant
 
@@ -16,7 +13,7 @@ class NewReleasesCommand : Command() {
 
   override suspend fun execute(context: CommandContext) {
 
-    val description = spotify.browse.getNewReleases().complete().toAlbumInfo()
+    val description = spotify.browse.getNewReleases().complete().toUnnumbered { toAlbumInfo() }
 
     val embed = EmbedBuilder()
       .setTitle("New Releases on Spotify")
