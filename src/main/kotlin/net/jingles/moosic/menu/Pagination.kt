@@ -273,13 +273,15 @@ class SelectionReactionListener(private val message: PaginatedSelection<out Any>
       event.user?.let { event.reaction.removeReaction(it).queue() }
     }
 
-    if (direction == 0) {
-      message.onSelection(message.currentSelection - 1)
-      return
-    }
-
     GlobalScope.launch {
-      event.channel.editMessageById(event.messageId, message.render(direction)).queue()
+
+      val embed = when(direction) {
+        -1, 1 -> message.render(direction)
+        else -> message.onSelection(message.currentSelection - 1)
+      }
+
+      event.channel.editMessageById(event.messageId, embed).queue()
+
     }
 
   }
