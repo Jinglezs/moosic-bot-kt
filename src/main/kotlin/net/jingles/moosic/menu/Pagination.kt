@@ -198,7 +198,7 @@ class PaginatedSelection<T : Any>(
 
       addReaction(SYMBOLS["up"]!!).queue()
       addReaction(SYMBOLS["down"]!!).queue()
-      addReaction(SYMBOLS["play"]!!).queue()
+      addReaction(SYMBOLS["check"]!!).queue()
 
       return this
 

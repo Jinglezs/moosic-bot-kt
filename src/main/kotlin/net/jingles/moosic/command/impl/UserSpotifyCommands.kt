@@ -408,7 +408,7 @@ class PlayerCommand : Command() {
 
       }, afterSelection = { selection -> playSelection(client, selection, builder) })
 
-    message.create(context.event.channel, PaginatedReactionListener(message), SelectionReactionListener(message))
+    message.create(context.event.channel, SelectionReactionListener(message))
 
   }
 
