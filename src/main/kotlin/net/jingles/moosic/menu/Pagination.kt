@@ -281,7 +281,7 @@ class ImageSlideshow(private val builder: EmbedBuilder, private val images: List
     index += handleReactionEvent(event)
 
     when {
-      index > images.size -> index = 0
+      index >= images.size -> index = 0
       index < 0 -> index = 0
     }
 

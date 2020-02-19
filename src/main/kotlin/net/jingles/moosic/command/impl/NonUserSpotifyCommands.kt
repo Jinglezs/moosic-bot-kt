@@ -1,11 +1,8 @@
 package net.jingles.moosic.command.impl
 
-import com.adamratzman.spotify.endpoints.public.ArtistApi
-import com.adamratzman.spotify.utils.Market
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.*
 import net.jingles.moosic.command.*
-import net.jingles.moosic.menu.ImageSlideshow
 import java.awt.Color
 import java.time.Instant
 
@@ -43,13 +40,8 @@ class ArtistInfoCommand : Command() {
     val artist = spotify.search.searchArtist(query).complete().firstOrNull()
       ?: throw CommandException("An artist with that name could not be found.")
 
-    val albums = spotify.artists.getArtistAlbums(
-      artist.id, market = Market.US,
-      include = *arrayOf(ArtistApi.AlbumInclusionStrategy.ALBUM)
-    ).complete()
-      .distinctBy { it.name }
-      .take(5)
-      .joinToString("\n") { it.name }
+    val topTracks = spotify.artists.getArtistTopTracks(artist.id).complete()
+      .take(5).toNumbered { name }
 
     val info = """
       Genres: ${artist.genres.joinToString()}
@@ -57,16 +49,17 @@ class ArtistInfoCommand : Command() {
       Popularity: ${artist.popularity}
     """.trimIndent()
 
-    val builder = EmbedBuilder()
+    val embed = EmbedBuilder()
       .setTitle(artist.name)
-      .addField("Albums", albums, true)
       .addField("General Info", info, true)
-      .setImage(artist.images.firstOrNull()?.url)
+      .addField("Top Tracks", topTracks, true)
+      .setImage(artist.images[0].url)
       .setColor(Color.WHITE)
       .setTimestamp(Instant.now())
       .setFooter("Powered by Spotify", SPOTIFY_ICON)
+      .build()
 
-    ImageSlideshow(builder, artist.images.map { it.url }).create(context.event.channel, 3e5.toLong())
+    context.event.channel.sendMessage(embed).queue()
 
   }
 
