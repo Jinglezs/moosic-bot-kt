@@ -137,6 +137,8 @@ open class PaginatedMessage<T : Any>(
   @SubscribeEvent
   fun onReactionAdd(event: MessageReactionAddEvent) {
 
+    if (event.messageIdLong != messageId || event.user?.isBot == true) return
+
     val direction = handleReactionEvent(event)
 
     if (direction == 0) {
@@ -192,11 +194,11 @@ class PaginatedSelection<T : Any>(
       when {
 
         newSelection < 1 -> {
-          currentSelection = pagingObject.limit
+          currentSelection = options.size
           pagingObject.getPrevious() ?: pagingObject
         }
 
-        newSelection > pagingObject.limit -> {
+        newSelection > options.size -> {
           currentSelection = 1
           pagingObject.getNext() ?: pagingObject
         }
