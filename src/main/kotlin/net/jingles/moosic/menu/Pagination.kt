@@ -304,7 +304,7 @@ private fun handleReactionEvent(event: MessageReactionAddEvent): Int {
 
   return when (reaction) {
     SYMBOLS["left"], SYMBOLS["up"] -> -1
-    SYMBOLS["right"], SYMBOLS["Down"] -> 1
+    SYMBOLS["right"], SYMBOLS["down"] -> 1
     else -> 0
   }
 
