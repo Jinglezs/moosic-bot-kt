@@ -28,7 +28,7 @@ import kotlin.time.MonoClock
  * The proportion of a player's guess that must match the song
  * title in order for it to be considered correct.
  */
-const val SUCCESS_LIMIT = 0.75
+const val SUCCESS_LIMIT = 0.70
 
 @ExperimentalTime
 class SongGuess(
@@ -92,7 +92,7 @@ class SongGuess(
 
       else -> currentTrack.artists.toNames()
 
-    }
+    }.trim()
 
     // Spotify only accepts lists of track IDs/URIs to play
     val tracksToPlay = listOf(currentTrack.id)
@@ -171,7 +171,7 @@ class SongGuess(
    */
   private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
 
-    val accuracy = editedName.percentMatch(guess)
+    val accuracy = editedName.toLowerCase().percentMatch(guess)
     if (accuracy < SUCCESS_LIMIT) return null
 
     val score = Score(accuracy, clockMark.elapsedNow().inSeconds)
@@ -247,7 +247,7 @@ class SongGuess(
     val spotify = players.find { it.discordId == event.author.idLong }!!
 
     // Gets a decimal that reflects the accuracy
-    val score = verifyGuess(spotify, event.message.contentStripped.toLowerCase()) ?: return
+    val score = verifyGuess(spotify, event.message.contentStripped.toLowerCase().trim()) ?: return
 
     // Delete the message so other players can't copy it
     if (channel.type == ChannelType.TEXT) event.message.delete().reason("Song Guess").queue()
