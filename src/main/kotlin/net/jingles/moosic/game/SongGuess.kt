@@ -62,7 +62,7 @@ class SongGuess(
       // Add the worst possible score for those who did not earn one
       scores.filterValues { it.size < getRoundNumber() }
         .forEach {
-          scores[it.key]!!.add(Score(0.0, 10.0))
+          scores[it.key]!!.add(Score(0.0, 10.0, false))
         }
 
       channel.sendMessage("The correct $type was $editedName").queue()
@@ -138,6 +138,9 @@ class SongGuess(
     val mostAccurate = scores.mapValues { it.value.sumByDouble { score -> score.accuracy } / it.value.size }
       .maxBy { entry -> entry.value }
 
+    val mostGuessed = scores.mapValues { it.value.sumBy { score -> if (score.guessed) 1 else 0 } }
+      .maxBy { entry -> entry.value }
+
     // Pair the usernames with the formatted results
     val time = Pair(
       fastestTime?.key?.discordId?.let { channel.jda.getUserById(it)?.name } ?: "N/A",
@@ -149,11 +152,17 @@ class SongGuess(
       mostAccurate?.value.let { it?.toPercent() ?: "0%" }
     )
 
+    val guessed = Pair(
+      mostGuessed?.key?.discordId?.let { channel.jda.getUserById(it)?.name } ?: "N/A",
+      mostGuessed?.value.let { "${it ?: "0"} correct guesses" }
+    )
+
     // Send an embedded message containing the results of the game
     val embed = EmbedBuilder()
       .setTitle("Song Guess Results")
       .addField("Fastest Average Time", "${time.first}: ${time.second}", true)
       .addField("Highest Average Accuracy", "${accuracy.first}: ${accuracy.second}", true)
+      .addField("Most Correct Guesses", "${guessed.first}: ${guessed.second}", true)
       .setColor(Color.WHITE)
       .setTimestamp(Instant.now())
       .build()
@@ -174,7 +183,7 @@ class SongGuess(
     val accuracy = editedName.toLowerCase().percentMatch(guess)
     if (accuracy < SUCCESS_LIMIT) return null
 
-    val score = Score(accuracy, clockMark.elapsedNow().inSeconds)
+    val score = Score(accuracy, clockMark.elapsedNow().inSeconds, true)
 
     if (!scores.containsKey(player)) scores[player] = mutableListOf()
     scores[player]!!.add(score)
@@ -264,4 +273,4 @@ class SongGuess(
 
 }
 
-private data class Score(val accuracy: Double, val time: Double)
+private data class Score(val accuracy: Double, val time: Double, val guessed: Boolean)
