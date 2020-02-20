@@ -12,8 +12,10 @@ import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.SubscribeEvent
 import net.jingles.moosic.format
+import net.jingles.moosic.percentMatch
 import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
+import net.jingles.moosic.toNames
 import net.jingles.moosic.toPercent
 import java.awt.Color
 import java.time.Instant
@@ -43,7 +45,7 @@ class SongGuess(
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
   private val tracks = populateTracks(owner, rounds)
   private val currentTrack get() = tracks.peek()
-  private lateinit var possibleMatches: List<String>
+  private lateinit var editedName: String
 
   init {
     players.add(owner)
@@ -63,7 +65,7 @@ class SongGuess(
           scores[it.key]!!.add(Score(0.0, 10.0))
         }
 
-      channel.sendMessage("The correct $type was ${currentTrack.name}").queue()
+      channel.sendMessage("The correct $type was $editedName").queue()
 
       // Proceed to the next track
       tracks.removeFirst()
@@ -83,11 +85,12 @@ class SongGuess(
     // Removes any extra information from the title, which is usually in parentheses
     // or following a hyphen. Ex: Never Be Alone - MTV Unplugged -> Never Be Alone
 
-    possibleMatches = when (type) {
-      "track" -> currentTrack.name.substringBefore("(").substringBefore("-")
-        .split(" ").map { it.trim().toLowerCase() }
-      else -> currentTrack.artists.joinToString(" ") { it.name.toLowerCase() }
-        .split(" ")
+    editedName = when (type) {
+
+      "title" -> currentTrack.name.substringBeforeLast("-")
+        .substringBeforeLast("(").trim()
+
+      else -> currentTrack.artists.toNames()
 
     }
 
@@ -168,10 +171,7 @@ class SongGuess(
    */
   private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
 
-    val matches = (possibleMatches + guess.split(" "))
-      .groupingBy { it }.eachCount().count { it.value > 1 }
-
-    val accuracy = matches.toDouble() / possibleMatches.size
+    val accuracy = editedName.percentMatch(guess)
     if (accuracy < SUCCESS_LIMIT) return null
 
     val score = Score(accuracy, clockMark.elapsedNow().inSeconds)

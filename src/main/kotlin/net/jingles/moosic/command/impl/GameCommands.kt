@@ -20,8 +20,8 @@ class SongGuessCommand : Command() {
 
     val type = context.arguments.pollFirst().toLowerCase()
 
-    if (type != "track" && type != "artist")
-      throw CommandException("The type must either be \"track\" or \"artist\"")
+    if (type != "title" && type != "artist")
+      throw CommandException("The type must either be \"title\" or \"artist\"")
 
     val rounds = min(context.arguments.pollFirst().toInt(), 20)
 
