@@ -246,6 +246,9 @@ class SongGuess(
 
     val spotify = players.find { it.discordId == event.author.idLong }!!
 
+    // Do not verify guesses after the player has a score for the current round
+    if (scores[spotify]?.size == getRoundNumber()) return
+
     // Gets a decimal that reflects the accuracy
     val score = verifyGuess(spotify, event.message.contentStripped.toLowerCase().trim()) ?: return
 
