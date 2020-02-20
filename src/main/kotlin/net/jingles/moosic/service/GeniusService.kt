@@ -1,8 +1,12 @@
 package net.jingles.moosic.service
 
+import org.json.JSONObject
+
 private val token: String = System.getenv("genius_token")
 
-suspend fun getSongUrl(query: String) {
+data class SearchResult(val title: String, val url: String)
+
+suspend fun search(query: String): List<SearchResult> {
 
   val hitArray = khttp.get(
     url = "https://api.genius.com/search",
@@ -10,6 +14,7 @@ suspend fun getSongUrl(query: String) {
     params = mapOf("q" to query)
   ).jsonObject.getJSONObject("response").getJSONArray("hits")
 
-  TODO("Find the hit that most closely matches the query and get its id/api path")
+  return hitArray.map { (it as JSONObject).getJSONObject("result") }
+    .map { SearchResult(it.getString("full_title"), it.getString("url")) }
 
 }

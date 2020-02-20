@@ -32,7 +32,8 @@ private val NUMBERS = mapOf(
 )
 
 abstract class Menu<T : Any>(
-  internal var pagingObject: AbstractPagingObject<T>,
+  internal var pagingObject: List<T>,
+  internal val limit: Int = 5,
   private val timeout: Long,
   title: String,
   protected val composer: Menu<T>.() -> Unit
@@ -47,11 +48,13 @@ abstract class Menu<T : Any>(
   private lateinit var jda: JDA
   private lateinit var job: Job
   private lateinit var channel: Pair<Long, ChannelType>
+
   internal var messageId: Long = 0
+  internal var offset: Int = 0
 
   open suspend fun create(channel: MessageChannel): Message {
 
-    val message = channel.sendMessage(render(0)).complete()
+    val message = channel.sendMessage(render()).complete()
 
     this.channel = Pair(channel.idLong, channel.type)
     this.messageId = message.idLong
@@ -68,7 +71,12 @@ abstract class Menu<T : Any>(
 
   }
 
-  abstract suspend fun render(direction: Int? = 0): MessageEmbed
+  open fun render(): MessageEmbed {
+    composer.invoke(this)
+    return builder.build()
+  }
+
+  abstract suspend fun get(direction: Int? = 0): List<T>
 
   /**
    * Unregisters the event listener and cancels the timeout job
@@ -91,11 +99,12 @@ abstract class Menu<T : Any>(
 }
 
 open class PaginatedMessage<T : Any>(
-  pagingObject: AbstractPagingObject<T>,
+  pagingObject: List<T>,
+  limit: Int = 5,
   timeout: Long,
   title: String,
   composer: PaginatedMessage<T>.() -> Unit
-) : Menu<T>(pagingObject, timeout, title, composer as Menu<T>.() -> Unit) {
+) : Menu<T>(pagingObject, limit, timeout, title, composer as Menu<T>.() -> Unit) {
 
   override suspend fun create(channel: MessageChannel): Message {
 
@@ -111,26 +120,27 @@ open class PaginatedMessage<T : Any>(
 
   }
 
-  /**
-   * Draws the items of either the current, previous, or next page.
-   * @param direction negative for previous, 0 for current, positive for next
-   */
-  override suspend fun render(direction: Int?): MessageEmbed {
+  override suspend fun get(direction: Int?): List<T> {
 
-    try {
+    if (pagingObject is AbstractPagingObject<T>) {
 
-      pagingObject = when (direction) {
-        -1 -> if (pagingObject.previous != null) pagingObject.getPrevious()!! else pagingObject
-        1 -> if (pagingObject.next != null) pagingObject.getNext()!! else pagingObject
-        else -> pagingObject
+      with (pagingObject as AbstractPagingObject<T>) {
+        try {
+
+          pagingObject = when (direction) {
+            -1 -> if (previous != null) getPrevious()!! else pagingObject
+            1 -> if (next != null) getNext()!! else pagingObject
+            else -> pagingObject
+          }
+
+        } catch (e: SpotifyException) {
+          println("${pagingObject.javaClass.simpleName}: Unable to parse the next paging object.")
+        }
+
+        return items
       }
 
-    } catch (e: SpotifyException) {
-      println("${pagingObject.javaClass.simpleName}: Unable to parse the next paging object.")
-    }
-
-    composer.invoke(this)
-    return builder.build()
+    } else return pagingObject.subList(offset, offset + limit)
 
   }
 
@@ -146,7 +156,7 @@ open class PaginatedMessage<T : Any>(
     }
 
     GlobalScope.launch {
-      event.channel.editMessageById(event.messageId, render(direction)).queue()
+      event.channel.editMessageById(event.messageId, render()).queue()
     }
 
   }
@@ -159,19 +169,16 @@ open class PaginatedMessage<T : Any>(
  */
 class PaginatedSelection<T : Any>(
   pagingObject: AbstractPagingObject<T>,
+  limit: Int = 5,
   timeout: Long,
   title: String,
   composer: PaginatedSelection<T>.() -> Unit,
   private val afterSelection: Menu<T>.(T) -> MessageEmbed
-) : Menu<T>(pagingObject, timeout, title, composer as Menu<T>.() -> Unit) {
+) : Menu<T>(pagingObject, limit, timeout, title, composer as Menu<T>.() -> Unit) {
 
-  internal val options = mutableListOf<T>()
   internal var currentSelection: Int = 1
 
   override suspend fun create(channel: MessageChannel): Message {
-
-    if (pagingObject.limit > 10)
-      throw IllegalArgumentException("The paging object's limit must be 10 items or less.")
 
     with(super.create(channel)) {
 
@@ -185,42 +192,45 @@ class PaginatedSelection<T : Any>(
 
   }
 
-  override suspend fun render(direction: Int?): MessageEmbed {
+  override suspend fun get(direction: Int?): List<T> {
 
-    pagingObject = try {
+    if (pagingObject is AbstractPagingObject<T>) {
 
-      val newSelection = currentSelection + direction!!
+      pagingObject = with (pagingObject as AbstractPagingObject<T>) {
 
-      when {
+        try {
 
-        newSelection < 1 -> {
-          currentSelection = options.size
-          pagingObject.getPrevious() ?: pagingObject
-        }
+          val newSelection = currentSelection + direction!!
 
-        newSelection > options.size -> {
-          currentSelection = 1
-          pagingObject.getNext() ?: pagingObject
-        }
+          when {
 
-        else -> {
-          currentSelection = newSelection
+            newSelection < 1 -> {
+              currentSelection = limit
+              getPrevious() ?: pagingObject
+            }
+
+            newSelection > limit -> {
+              currentSelection = 1
+              getNext() ?: pagingObject
+            }
+
+            else -> {
+              currentSelection = newSelection
+              pagingObject
+            }
+
+          }
+
+        } catch (exception: SpotifyException) {
+          println("${pagingObject.javaClass.simpleName}: Unable to parse the previous/next paging object.")
           pagingObject
         }
 
+        return items
+
       }
 
-
-    } catch (exception: SpotifyException) {
-      println("${pagingObject.javaClass.simpleName}: Unable to parse the previous/next paging object.")
-      pagingObject
-    }
-
-    options.clear()
-    options.addAll(pagingObject.items)
-
-    composer.invoke(this)
-    return builder.build()
+    } else return pagingObject.subList(offset, (offset + limit).coerceAtMost(pagingObject.size - 1))
 
   }
 
@@ -234,7 +244,7 @@ class PaginatedSelection<T : Any>(
     GlobalScope.launch {
 
       val embed = when(direction) {
-        -1, 1 -> render(direction)
+        -1, 1 ->
         else -> {
           stop()
           afterSelection.invoke(this@PaginatedSelection, pagingObject[currentSelection - 1])
