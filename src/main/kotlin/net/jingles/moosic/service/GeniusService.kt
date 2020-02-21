@@ -34,9 +34,9 @@ fun getLyrics(url: String): List<Pair<String, String>> {
   return if (lyrics.contains(regex)) {
 
     val headings = regex.findAll(lyrics).map { it.value }
-    val sections = regex.split(lyrics, headings.count())
+    val sections = regex.split(lyrics, headings.count() + 1)
 
-    headings.mapIndexed { index, heading -> Pair(heading, sections[index]) }.toList()
+    headings.mapIndexed { index, heading -> Pair(heading, sections[index + 1]) }.toList()
 
   } else lyrics.split("\n\n").map { Pair('\u200b'.toString(), it) }
 
