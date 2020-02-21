@@ -60,6 +60,7 @@ abstract class Menu<T : Any>(
 
   open suspend fun create(channel: MessageChannel): Message {
 
+    currentElements = handler.getCurrent()
     val message = channel.sendMessage(render(0)).complete()
 
     this.channel = Pair(channel.idLong, channel.type)
