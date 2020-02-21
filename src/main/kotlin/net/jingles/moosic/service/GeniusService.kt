@@ -11,13 +11,11 @@ fun search(query: String): List<SearchResult> {
 
   val hitArray = khttp.get(
     url = "https://api.genius.com/search",
-    headers = mapOf("Authorization" to token),
+    headers = mapOf("Bearer" to token),
     params = mapOf("q" to query)
-  ).jsonObject
+  ).jsonObject.getJSONObject("response").getJSONArray("hits")
 
-    println(hitArray.toString(4))
-
-  return hitArray.getJSONObject("response").getJSONArray("hits").map { (it as JSONObject).getJSONObject("result") }
+  return hitArray.map { (it as JSONObject).getJSONObject("result") }
     .map { SearchResult(it.getString("full_title"), it.getString("url")) }
 
 }
