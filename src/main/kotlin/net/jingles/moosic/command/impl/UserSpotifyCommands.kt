@@ -11,6 +11,7 @@ import net.jingles.moosic.*
 import net.jingles.moosic.command.*
 import net.jingles.moosic.menu.PaginatedMessage
 import net.jingles.moosic.menu.PaginatedSelection
+import net.jingles.moosic.menu.PagingObjectHandler
 import net.jingles.moosic.service.SCOPES
 import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
@@ -99,8 +100,8 @@ class FavoritesCommand : Command() {
 
         val artists = spotify.clientAPI.personalization.getTopArtists(timeRange = timeRange, limit = 10).complete()
 
-        PaginatedMessage(artists, 9e5.toLong(), title) {
-          builder.setDescription(pagingObject.items.toNumbered(pagingObject.offset) { this.name })
+        PaginatedMessage(PagingObjectHandler(artists), 9e5.toLong(), title) {
+          builder.setDescription(currentElements.toNumbered(handler.offset) { this.name })
         }
 
       }
@@ -109,8 +110,8 @@ class FavoritesCommand : Command() {
 
         val tracks = spotify.clientAPI.personalization.getTopTracks(timeRange = timeRange, limit = 10).complete()
 
-        PaginatedMessage(tracks, 9e5.toLong(), title) {
-          builder.setDescription(pagingObject.items.toNumbered(pagingObject.offset) { toSimpleTrackInfo() })
+        PaginatedMessage(PagingObjectHandler(tracks), 9e5.toLong(), title) {
+          builder.setDescription(currentElements.toNumbered(handler.offset) { toSimpleTrackInfo() })
         }
 
       }
@@ -232,11 +233,11 @@ class StalkCommand : Command() {
 
     val pagingObject = spotify.player.getRecentlyPlayed(limit = 10).complete()
 
-    PaginatedMessage(pagingObject, 9e5.toLong(), "$name's Play History") {
+    PaginatedMessage(PagingObjectHandler(pagingObject), 9e5.toLong(), "$name's Play History") {
 
       builder.fields.clear() // Clear the fields from the previous page
 
-      pagingObject.items.map {
+      currentElements.map {
         Pair(
           it.track,
           it.playedAt.toZonedTime()
@@ -248,7 +249,7 @@ class StalkCommand : Command() {
           // Places each hour block into its own field
 
           val title = pairs.first().second.toReadable()
-          val tracks = pairs.map { it.first }.toNumbered(pagingObject.offset) { toTrackInfo() }
+          val tracks = pairs.map { it.first }.toNumbered(handler.offset) { toTrackInfo() }
 
           builder.addField(title, tracks, false)
 
@@ -393,16 +394,16 @@ class PlayerCommand : Command() {
 
     }
 
-    PaginatedSelection(searchResult, 6e4.toLong(), "${context.event.author.name}'s Search Results",
+    PaginatedSelection(PagingObjectHandler(searchResult), 6e4.toLong(), "${context.event.author.name}'s Search Results",
       composer = {
 
         val boldIndex = currentSelection - 1
 
-        val description = when (options[0]) {
-          is Track -> (options as List<Track>).toNumbered(pagingObject.offset, boldIndex) { toSimpleTrackInfo() }
-          is Artist -> (options as List<Artist>).toNumbered(pagingObject.offset, boldIndex) { name }
-          is SimpleAlbum -> (options as List<SimpleAlbum>).toNumbered(pagingObject.offset, boldIndex) { toAlbumInfo() }
-          else -> (options as List<SimplePlaylist>).toNumbered(pagingObject.offset, boldIndex) { toPlaylistInfo() }
+        val description = when (currentElements[0]) {
+          is Track -> (currentElements as List<Track>).toNumbered(handler.offset, boldIndex) { toSimpleTrackInfo() }
+          is Artist -> (currentElements as List<Artist>).toNumbered(handler.offset, boldIndex) { name }
+          is SimpleAlbum -> (currentElements as List<SimpleAlbum>).toNumbered(handler.offset, boldIndex) { toAlbumInfo() }
+          else -> (currentElements as List<SimplePlaylist>).toNumbered(handler.offset, boldIndex) { toPlaylistInfo() }
         }
 
         builder.setDescription(description)
