@@ -13,9 +13,11 @@ fun search(query: String): List<SearchResult> {
     url = "https://api.genius.com/search",
     headers = mapOf("Authorization" to token),
     params = mapOf("q" to query)
-  ).jsonObject.getJSONArray("hits")
+  ).jsonObject
 
-  return hitArray.map { (it as JSONObject).getJSONObject("result") }
+    println(hitArray.toString(4))
+
+  return hitArray.getJSONObject("response").getJSONArray("hits").map { (it as JSONObject).getJSONObject("result") }
     .map { SearchResult(it.getString("full_title"), it.getString("url")) }
 
 }
