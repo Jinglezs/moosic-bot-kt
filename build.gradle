@@ -26,6 +26,7 @@ dependencies {
     implementation 'io.undertow:undertow-servlet:2.0.1.Final'
     implementation 'mysql:mysql-connector-java:5.1.46'
     implementation 'com.github.jkcclemens:khttp:0.1.0'
+    implementation 'org.jsoup:jsoup:1.12.2'
     testImplementation group: 'junit', name: 'junit', version: '4.12'
 }
 

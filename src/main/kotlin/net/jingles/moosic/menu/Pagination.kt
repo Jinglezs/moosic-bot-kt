@@ -31,23 +31,32 @@ private val NUMBERS = mapOf(
   10 to "\uD83D\uDD1F"
 )
 
+/**
+ * Represents an embedded message that is meant to be controlled
+ * via reactions in order to display information.
+ */
 abstract class Menu<T : Any>(
-  internal var pagingObject: AbstractPagingObject<T>,
+  internal val handler: ListHandler<T>,
   private val timeout: Long,
   title: String,
   protected val composer: Menu<T>.() -> Unit
 ) {
 
+  // A template for all menus
   internal val builder = EmbedBuilder()
     .setTitle(title)
     .setColor(Color.WHITE)
     .setFooter("Powered by Spotify", SPOTIFY_ICON)
     .setTimestamp(Instant.now())
 
+  // Used to identify and control the this message
   private lateinit var jda: JDA
   private lateinit var job: Job
   private lateinit var channel: Pair<Long, ChannelType>
   internal var messageId: Long = 0
+
+  // Used for displaying information
+  internal lateinit var currentElements: List<T>
 
   open suspend fun create(channel: MessageChannel): Message {
 
@@ -91,17 +100,17 @@ abstract class Menu<T : Any>(
 }
 
 open class PaginatedMessage<T : Any>(
-  pagingObject: AbstractPagingObject<T>,
+  handler: ListHandler<T>,
   timeout: Long,
   title: String,
   composer: PaginatedMessage<T>.() -> Unit
-) : Menu<T>(pagingObject, timeout, title, composer as Menu<T>.() -> Unit) {
+) : Menu<T>(handler, timeout, title, composer as Menu<T>.() -> Unit) {
 
   override suspend fun create(channel: MessageChannel): Message {
 
     with(super.create(channel)) {
 
-      if (pagingObject !is CursorBasedPagingObject) addReaction(SYMBOLS["left"]!!).queue()
+      if (handler.list !is CursorBasedPagingObject) addReaction(SYMBOLS["left"]!!).queue()
       addReaction(SYMBOLS["stop"]!!).queue()
       addReaction(SYMBOLS["right"]!!).queue()
 
@@ -117,16 +126,10 @@ open class PaginatedMessage<T : Any>(
    */
   override suspend fun render(direction: Int?): MessageEmbed {
 
-    try {
-
-      pagingObject = when (direction) {
-        -1 -> if (pagingObject.previous != null) pagingObject.getPrevious()!! else pagingObject
-        1 -> if (pagingObject.next != null) pagingObject.getNext()!! else pagingObject
-        else -> pagingObject
-      }
-
-    } catch (e: SpotifyException) {
-      println("${pagingObject.javaClass.simpleName}: Unable to parse the next paging object.")
+    currentElements = when (direction) {
+      -1 -> handler.getPrevious()
+      1 -> handler.getNext()
+      else -> handler.getCurrent()
     }
 
     composer.invoke(this)
@@ -158,20 +161,16 @@ open class PaginatedMessage<T : Any>(
  * represents selections the user may choose from.
  */
 class PaginatedSelection<T : Any>(
-  pagingObject: AbstractPagingObject<T>,
+  handler: ListHandler<T>,
   timeout: Long,
   title: String,
   composer: PaginatedSelection<T>.() -> Unit,
   private val afterSelection: Menu<T>.(T) -> MessageEmbed
-) : Menu<T>(pagingObject, timeout, title, composer as Menu<T>.() -> Unit) {
+) : Menu<T>(handler, timeout, title, composer as Menu<T>.() -> Unit) {
 
-  internal val options = mutableListOf<T>()
   internal var currentSelection: Int = 1
 
   override suspend fun create(channel: MessageChannel): Message {
-
-    if (pagingObject.limit > 10)
-      throw IllegalArgumentException("The paging object's limit must be 10 items or less.")
 
     with(super.create(channel)) {
 
@@ -187,37 +186,26 @@ class PaginatedSelection<T : Any>(
 
   override suspend fun render(direction: Int?): MessageEmbed {
 
-    pagingObject = try {
+    val newSelection = currentSelection + direction!!
 
-      val newSelection = currentSelection + direction!!
+    currentElements = when {
 
-      when {
-
-        newSelection < 1 -> {
-          currentSelection = options.size
-          pagingObject.getPrevious() ?: pagingObject
-        }
-
-        newSelection > options.size -> {
-          currentSelection = 1
-          pagingObject.getNext() ?: pagingObject
-        }
-
-        else -> {
-          currentSelection = newSelection
-          pagingObject
-        }
-
+      newSelection < 1 -> {
+        currentSelection = currentElements.size
+        handler.getPrevious()
       }
 
+      newSelection > currentElements.size -> {
+        currentSelection = 1
+        handler.getNext()
+      }
 
-    } catch (exception: SpotifyException) {
-      println("${pagingObject.javaClass.simpleName}: Unable to parse the previous/next paging object.")
-      pagingObject
+      else -> {
+        currentSelection = newSelection
+        currentElements
+      }
+
     }
-
-    options.clear()
-    options.addAll(pagingObject.items)
 
     composer.invoke(this)
     return builder.build()
@@ -237,7 +225,7 @@ class PaginatedSelection<T : Any>(
         -1, 1 -> render(direction)
         else -> {
           stop()
-          afterSelection.invoke(this@PaginatedSelection, pagingObject[currentSelection - 1])
+          afterSelection.invoke(this@PaginatedSelection, currentElements[currentSelection - 1])
         }
       }
 
@@ -309,3 +297,73 @@ private fun handleReactionEvent(event: MessageReactionAddEvent): Int {
   }
 
 }
+
+open class ListHandler<T: Any>(
+  internal var list: List<T>,
+  protected val limit: Int = 5
+) {
+
+  internal var offset: Int = 0
+
+  open suspend fun getPrevious(): List<T> {
+    // Subtract the limit from the offset, with a min value of 0
+    offset = (offset - limit).coerceAtLeast(0)
+    // End index is the offset plus the max elements per "page"
+    val endIndex = (offset + limit).coerceAtMost(list.size)
+    // Return the items in between the two indexes
+    return list.subList(offset, endIndex)
+
+  }
+
+  open suspend fun getNext(): List<T> {
+    // Add the limit to the offset, with a max value of the highest index
+    offset = (offset + limit).coerceAtMost(list.size - 1)
+    // End index is the offset plus elements per "page," max value of the list size
+    val endIndex = (offset + limit).coerceAtMost(list.size)
+    // Return the items in between the two indexes
+    return list.subList(offset, endIndex)
+  }
+
+  open fun getCurrent(): List<T> = list.subList(offset, (offset + limit).coerceAtMost(list.size))
+
+}
+
+class PagingObjectHandler<T: Any>(list: AbstractPagingObject<T>) : ListHandler<T>(list, list.limit) {
+
+  override suspend fun getPrevious(): List<T> {
+
+    with (list as AbstractPagingObject<T>) {
+
+      list = try {
+        getPrevious() ?: list
+      } catch (e: SpotifyException) {
+        println("${javaClass.simpleName}: Unable to parse the previous paging object.")
+        list
+      }
+
+      return items
+
+    }
+
+  }
+
+  override suspend fun getNext(): List<T> {
+
+    with (list as AbstractPagingObject<T>) {
+
+      list = try {
+        getNext() ?: list
+      } catch (e: SpotifyException) {
+        println("${javaClass.simpleName}: Unable to parse the next paging object.")
+        list
+      }
+
+      return items
+
+    }
+
+  }
+
+}
+
+
