@@ -3,6 +3,11 @@ package net.jingles.moosic.command.impl
 import net.dv8tion.jda.api.EmbedBuilder
 import net.jingles.moosic.*
 import net.jingles.moosic.command.*
+import net.jingles.moosic.menu.ListHandler
+import net.jingles.moosic.menu.PaginatedSelection
+import net.jingles.moosic.service.getLyrics
+import net.jingles.moosic.service.getSpotifyClient
+import net.jingles.moosic.service.search
 import java.awt.Color
 import java.time.Instant
 
@@ -60,6 +65,50 @@ class ArtistInfoCommand : Command() {
       .build()
 
     context.event.channel.sendMessage(embed).queue()
+
+  }
+
+}
+
+@CommandMeta(
+  category = Category.GENERAL, triggers = ["lyrics"], args = "<query>",
+  description = "Fetches and displays song lyrics from Genius"
+)
+class LyricsCommand : Command() {
+
+  override suspend fun execute(context: CommandContext) {
+
+    val query = when {
+
+      context.getArgCount() != 0 -> context.arguments.joinToString("%20")
+
+      else -> {
+
+        val client = getSpotifyClient(context.event.author.idLong)?.clientAPI
+
+        client?.player?.getCurrentlyPlaying()?.complete()?.track?.toSimpleTrackInfo()
+          ?: throw CommandException("No query was provided and a song is not playing on Spotify >:V")
+      }
+
+    }
+
+
+    PaginatedSelection(ListHandler(search(query), 5), 6e4.toLong(), "Genius Search Results",
+      composer = {
+
+        val boldIndex = currentSelection - 1
+        val description = currentElements.toNumbered(handler.offset, boldIndex) { title }
+
+        builder.setDescription(description)
+
+      }, afterSelection = { selection ->
+
+        getLyrics(selection.url).forEach { builder.addField(it.first, it.second, false) }
+
+        builder.setTitle(selection.title)
+        builder.build()
+
+      }).create(context.event.channel)
 
   }
 
