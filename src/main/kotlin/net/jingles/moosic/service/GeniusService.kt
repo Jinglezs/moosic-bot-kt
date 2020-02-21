@@ -11,7 +11,7 @@ fun search(query: String): List<SearchResult> {
 
   val hitArray = khttp.get(
     url = "https://api.genius.com/search",
-    headers = mapOf("Bearer" to token),
+    headers = mapOf("Authorization" to "Bearer $token"),
     params = mapOf("q" to query)
   ).jsonObject.getJSONObject("response").getJSONArray("hits")
 
