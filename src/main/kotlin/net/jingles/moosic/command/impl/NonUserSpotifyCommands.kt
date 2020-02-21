@@ -105,8 +105,7 @@ class LyricsCommand : Command() {
 
         getLyrics(selection.url).forEach { builder.addField(it.first, it.second, false) }
 
-        builder.setTitle(selection.title)
-        builder.build()
+        builder.setTitle(selection.title).setDescription(null).build()
 
       }).create(context.event.channel)
 

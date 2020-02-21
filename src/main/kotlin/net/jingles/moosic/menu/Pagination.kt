@@ -318,7 +318,7 @@ open class ListHandler<T: Any>(
 
   open suspend fun getNext(): List<T> {
     // Add the limit to the offset, with a max value of the highest index
-    offset = (offset + limit).coerceAtMost(list.size - 1)
+    offset = (offset + limit).coerceAtMost(list.size)
     // End index is the offset plus elements per "page," max value of the list size
     val endIndex = (offset + limit).coerceAtMost(list.size)
     // Return the items in between the two indexes

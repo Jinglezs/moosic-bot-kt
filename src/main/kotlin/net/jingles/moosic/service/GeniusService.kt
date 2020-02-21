@@ -31,12 +31,13 @@ fun getLyrics(url: String): List<Pair<String, String>> {
 
   val regex = Regex("(\\[.*?])")
 
-  return if (lyrics.contains(regex))
+  return if (lyrics.contains(regex)) {
 
-    regex.findAll(lyrics).map {
-      Pair(it.value, lyrics.substring(it.range.first, it.range.last))
-    }.toList()
+    val headings = regex.findAll(lyrics).map { it.value }
+    val sections = regex.split(lyrics, 1)
 
-  else lyrics.split("\n\n").map { Pair('\u200b'.toString(), it) }
+    headings.mapIndexed { index, heading -> Pair(heading, sections[index]) }.toList()
+
+  } else lyrics.split("\n\n").map { Pair('\u200b'.toString(), it) }
 
 }
