@@ -1,4 +1,4 @@
-package net.jingles.moosic.menu
+package net.jingles.moosic.reaction
 
 import com.adamratzman.spotify.SpotifyException
 import com.adamratzman.spotify.models.AbstractPagingObject
@@ -21,7 +21,8 @@ import java.time.Instant
 
 private val SYMBOLS = mapOf(
   "left" to "\u25C0", "right" to "\u25B6", "stop" to "\u23F9",
-  "up" to "\u2B06", "down" to "\u2B07", "check" to "\u2611"
+  "up" to "\u2B06", "down" to "\u2B07", "check" to "\u2611",
+  "upvote" to "\u1F44D", "downvote" to "\u1F44E"
 )
 
 private val NUMBERS = mapOf(
@@ -36,7 +37,7 @@ private val NUMBERS = mapOf(
  * via reactions in order to display information.
  */
 abstract class Menu<T : Any>(
-  internal val handler: ListHandler<T>,
+  internal val handler: ListHandler<T>? = null,
   private val timeout: Long,
   title: String,
   protected val composer: Menu<T>.() -> Unit
@@ -60,7 +61,7 @@ abstract class Menu<T : Any>(
 
   open suspend fun create(channel: MessageChannel): Message {
 
-    currentElements = handler.getCurrent()
+    if (handler != null) currentElements = handler.getCurrent()
     val message = channel.sendMessage(render(0)).complete()
 
     this.channel = Pair(channel.idLong, channel.type)
@@ -94,7 +95,12 @@ abstract class Menu<T : Any>(
       else -> null
     } ?: return
 
-    message.reactions.forEach { it.removeReaction().queue() }
+    message.reactions.map { it.reactionEmote }.forEach {
+      when {
+        it.isEmote -> message.removeReaction(it.emote).queue()
+        it.isEmoji -> message.removeReaction(it.emoji).queue()
+      }
+    }
 
   }
 
@@ -111,7 +117,7 @@ open class PaginatedMessage<T : Any>(
 
     with(super.create(channel)) {
 
-      if (handler.list !is CursorBasedPagingObject) addReaction(SYMBOLS["left"]!!).queue()
+      if (handler?.list !is CursorBasedPagingObject) addReaction(SYMBOLS["left"]!!).queue()
       addReaction(SYMBOLS["stop"]!!).queue()
       addReaction(SYMBOLS["right"]!!).queue()
 
@@ -128,10 +134,10 @@ open class PaginatedMessage<T : Any>(
   override suspend fun render(direction: Int?): MessageEmbed {
 
     currentElements = when (direction) {
-      -1 -> handler.getPrevious()
-      1 -> handler.getNext()
-      else -> handler.getCurrent()
-    }
+      -1 -> handler?.getPrevious()
+      1 -> handler?.getNext()
+      else -> handler?.getCurrent()
+    } ?: emptyList()
 
     composer.invoke(this)
     return builder.build()
@@ -193,12 +199,12 @@ class PaginatedSelection<T : Any>(
 
       newSelection < 1 -> {
         currentSelection = currentElements.size
-        handler.getPrevious()
+        handler?.getPrevious()
       }
 
       newSelection > currentElements.size -> {
         currentSelection = 1
-        handler.getNext()
+        handler?.getNext()
       }
 
       else -> {
@@ -206,7 +212,7 @@ class PaginatedSelection<T : Any>(
         currentElements
       }
 
-    }
+    } ?: emptyList()
 
     composer.invoke(this)
     return builder.build()
@@ -238,6 +244,7 @@ class PaginatedSelection<T : Any>(
 
 }
 
+// An embedded message whose image can be changed via arrow reactions like a slideshow
 class ImageSlideshow(private val builder: EmbedBuilder, private val images: List<String>) {
 
   private var messageId: Long = 0
@@ -283,6 +290,66 @@ class ImageSlideshow(private val builder: EmbedBuilder, private val images: List
 
 }
 
+class ReactionVote<T : Any>(
+  val topic: T,
+  val maxVotes: Int,
+  private val requirement: Double,
+  timeout: Long,
+  title: String,
+  composer: ReactionVote<T>.() -> Unit,
+  private val onSuccess: ReactionVote<T>.() -> MessageEmbed,
+  private val onFailure: ReactionVote<T>.() -> MessageEmbed
+) : Menu<T>(null, timeout, title, composer as Menu<T>.() -> Unit) {
+
+  private val voters = mutableListOf<Long>()
+  var upvotes = 0
+  var downvotes = 0
+
+  override suspend fun render(direction: Int?): MessageEmbed {
+    composer.invoke(this)
+    return builder.build()
+  }
+
+  @SubscribeEvent
+  fun onReactionAdd(event: MessageReactionAddEvent) {
+
+    if (event.messageIdLong != messageId || voters.contains(event.userIdLong)
+      || event.user?.isBot == true) return
+
+    voters.add(event.userIdLong)
+
+    val direction = handleReactionEvent(event)
+
+    when (direction) {
+      -1 -> downvotes++; 1 -> upvotes++
+    }
+
+    GlobalScope.launch {
+
+      val embed = when {
+
+        upvotes / maxVotes.toDouble() > requirement -> {
+          stop()
+          onSuccess.invoke(this@ReactionVote)
+        }
+
+        downvotes / maxVotes.toDouble() > 1 - requirement -> {
+          stop()
+          onFailure.invoke(this@ReactionVote)
+        }
+
+        else -> render(direction)
+
+      }
+
+      event.channel.editMessageById(messageId, embed).queue()
+
+    }
+
+  }
+
+}
+
 private fun handleReactionEvent(event: MessageReactionAddEvent): Int {
 
   val reaction = event.reaction.reactionEmote.emoji
@@ -292,8 +359,8 @@ private fun handleReactionEvent(event: MessageReactionAddEvent): Int {
   }
 
   return when (reaction) {
-    SYMBOLS["left"], SYMBOLS["up"] -> -1
-    SYMBOLS["right"], SYMBOLS["down"] -> 1
+    SYMBOLS["left"], SYMBOLS["up"], SYMBOLS["downvote"] -> -1
+    SYMBOLS["right"], SYMBOLS["down"], SYMBOLS["upvote"] -> 1
     else -> 0
   }
 

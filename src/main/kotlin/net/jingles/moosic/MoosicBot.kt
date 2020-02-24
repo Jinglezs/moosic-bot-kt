@@ -18,6 +18,7 @@ import kotlin.concurrent.timerTask
 
 
 const val SPOTIFY_ICON = "https://developer.spotify.com/assets/branding-guidelines/icon2@2x.png"
+const val GENIUS_ICON = "https://images.genius.com/ba9fba1d0cdbb5e3f8218cbf779c1a49.300x300x1.jpg"
 
 lateinit var credentials: SpotifyCredentials
 lateinit var spotify: SpotifyAppApi

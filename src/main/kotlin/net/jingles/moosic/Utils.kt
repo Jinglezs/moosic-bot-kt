@@ -53,7 +53,7 @@ fun SimpleAlbum.toAlbumInfo() = "$name by ${artists.toNames()}"
 
 fun SimplePlaylist.toPlaylistInfo() = "$name by ${owner.displayName} (${tracks.total} Tracks)"
 
-// Other stuff
+// Other String stuff
 
 fun String.percentMatch(other: String): Double {
   val levenshteinDistance = levenshtein(this, other)

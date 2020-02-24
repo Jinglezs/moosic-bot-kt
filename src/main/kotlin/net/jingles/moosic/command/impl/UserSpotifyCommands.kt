@@ -9,9 +9,10 @@ import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.jingles.moosic.*
 import net.jingles.moosic.command.*
-import net.jingles.moosic.menu.PaginatedMessage
-import net.jingles.moosic.menu.PaginatedSelection
-import net.jingles.moosic.menu.PagingObjectHandler
+import net.jingles.moosic.reaction.ListHandler
+import net.jingles.moosic.reaction.PaginatedMessage
+import net.jingles.moosic.reaction.PaginatedSelection
+import net.jingles.moosic.reaction.PagingObjectHandler
 import net.jingles.moosic.service.SCOPES
 import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
@@ -20,7 +21,7 @@ import java.awt.Color
 import java.time.Instant
 
 private const val NOT_AUTHENTICATED = "This command requires Spotify authentication >:V"
-private val SEARCH_TYPES = listOf("track", "album", "playlist", "artist")
+val SEARCH_TYPES = listOf("track", "album", "playlist", "artist")
 
 @CommandMeta(
   category = Category.SPOTIFY, triggers = ["authenticate"], minArgs = 0,
@@ -101,7 +102,7 @@ class FavoritesCommand : Command() {
         val artists = spotify.clientAPI.personalization.getTopArtists(timeRange = timeRange, limit = 10).complete()
 
         PaginatedMessage(PagingObjectHandler(artists), 9e5.toLong(), title) {
-          builder.setDescription(currentElements.toNumbered(handler.offset) { this.name })
+          builder.setDescription(currentElements.toNumbered(handler!!.offset) { this.name })
         }
 
       }
@@ -111,7 +112,7 @@ class FavoritesCommand : Command() {
         val tracks = spotify.clientAPI.personalization.getTopTracks(timeRange = timeRange, limit = 10).complete()
 
         PaginatedMessage(PagingObjectHandler(tracks), 9e5.toLong(), title) {
-          builder.setDescription(currentElements.toNumbered(handler.offset) { toSimpleTrackInfo() })
+          builder.setDescription(currentElements.toNumbered(handler!!.offset) { toSimpleTrackInfo() })
         }
 
       }
@@ -145,19 +146,12 @@ class RecommendationsCommand : Command() {
 
     val tracks = spotify.browse.getTrackRecommendations(
       seedTracks = seedTracks,
-      seedArtists = seedArtists,
-      limit = 10
-    ).complete().tracks.toNumbered { toSimpleTrackInfo() }
+      seedArtists = seedArtists
+    ).complete().tracks //.tracks.toNumbered { toSimpleTrackInfo() }
 
-    val embed = EmbedBuilder()
-      .setTitle("Recommended Tracks from ${current.name}")
-      .setDescription(tracks)
-      .setColor(Color.WHITE)
-      .setTimestamp(Instant.now())
-      .setFooter("Powered by Spotify", SPOTIFY_ICON)
-      .build()
-
-    context.event.channel.sendMessage(embed).queue()
+    PaginatedMessage(ListHandler(tracks), 6e3.toLong(), "Recommended Tracks based on ${current.name}") {
+      builder.setDescription(currentElements.toNumbered(handler!!.offset) { toSimpleTrackInfo() })
+    }.create(context.event.channel)
 
   }
 
@@ -249,7 +243,7 @@ class StalkCommand : Command() {
           // Places each hour block into its own field
 
           val title = pairs.first().second.toReadable()
-          val tracks = pairs.map { it.first }.toNumbered(handler.offset) { toTrackInfo() }
+          val tracks = pairs.map { it.first }.toNumbered(handler!!.offset) { toTrackInfo() }
 
           builder.addField(title, tracks, false)
 
@@ -336,7 +330,8 @@ class PlayerCommand : Command() {
     val currentlyPlaying = if (context.track == null) "Nothing" else with(context.track!!) {
 
       """
-        Now Playing: $name on ${album.toAlbumInfo()}
+        Track: $name
+        Album: ${album.name}
         Artists: ${artists.toNames()}
         Popularity: $popularity
         Progress: ${context.progressMs?.div(durationMs.toFloat())?.toPercent()}
@@ -400,10 +395,10 @@ class PlayerCommand : Command() {
         val boldIndex = currentSelection - 1
 
         val description = when (currentElements[0]) {
-          is Track -> (currentElements as List<Track>).toNumbered(handler.offset, boldIndex) { toSimpleTrackInfo() }
-          is Artist -> (currentElements as List<Artist>).toNumbered(handler.offset, boldIndex) { name }
-          is SimpleAlbum -> (currentElements as List<SimpleAlbum>).toNumbered(handler.offset, boldIndex) { toAlbumInfo() }
-          else -> (currentElements as List<SimplePlaylist>).toNumbered(handler.offset, boldIndex) { toPlaylistInfo() }
+          is Track -> (currentElements as List<Track>).toNumbered(handler!!.offset, boldIndex) { toSimpleTrackInfo() }
+          is Artist -> (currentElements as List<Artist>).toNumbered(handler!!.offset, boldIndex) { name }
+          is SimpleAlbum -> (currentElements as List<SimpleAlbum>).toNumbered(handler!!.offset, boldIndex) { toAlbumInfo() }
+          else -> (currentElements as List<SimplePlaylist>).toNumbered(handler!!.offset, boldIndex) { toPlaylistInfo() }
         }
 
         builder.setDescription(description)
