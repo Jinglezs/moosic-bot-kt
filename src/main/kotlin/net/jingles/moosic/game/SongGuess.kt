@@ -111,7 +111,7 @@ class SongGuess(
 
     } catch (e: SpotifyException) {
       channel.sendMessage("Error continuing to the next round: ${e.message}").queue()
-      endGame(); return
+      nextRound(); return
     }
 
     // Marks the time this round began
