@@ -18,7 +18,7 @@ class NewReleasesCommand : Command() {
 
   override suspend fun execute(context: CommandContext) {
 
-    val albums = spotify.browse.getNewReleases().complete()
+    val albums = spotify.browse.getNewReleases(limit = 10).complete()
 
     PaginatedMessage(PagingObjectHandler(albums), 6e4.toLong(), "New Releases on Spotify") {
       builder.setDescription(currentElements.toNumbered(offset = handler!!.offset) { toAlbumInfo() })

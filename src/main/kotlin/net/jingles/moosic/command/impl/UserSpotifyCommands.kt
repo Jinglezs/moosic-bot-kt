@@ -147,9 +147,9 @@ class RecommendationsCommand : Command() {
     val tracks = spotify.browse.getTrackRecommendations(
       seedTracks = seedTracks,
       seedArtists = seedArtists
-    ).complete().tracks //.tracks.toNumbered { toSimpleTrackInfo() }
+    ).complete().tracks
 
-    PaginatedMessage(ListHandler(tracks), 6e3.toLong(), "Recommended Tracks based on ${current.name}") {
+    PaginatedMessage(ListHandler(tracks, 10), 6e4.toLong(), "Recommended Tracks based on ${current.name}") {
       builder.setDescription(currentElements.toNumbered(handler!!.offset) { toSimpleTrackInfo() })
     }.create(context.event.channel)
 

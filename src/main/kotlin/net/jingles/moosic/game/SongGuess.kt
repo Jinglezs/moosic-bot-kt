@@ -11,12 +11,9 @@ import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.SubscribeEvent
-import net.jingles.moosic.format
-import net.jingles.moosic.percentMatch
+import net.jingles.moosic.*
 import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
-import net.jingles.moosic.toNames
-import net.jingles.moosic.toPercent
 import java.awt.Color
 import java.time.Instant
 import java.util.*
@@ -130,6 +127,16 @@ class SongGuess(
 
   private fun endGame() {
 
+    val scoreboard = scores.mapValues { entry ->
+      entry.value.sumBy {
+        var points = if (it.guessed) 100 else 0 // 100 points for guessing
+        points += (15 - it.time).toInt() * 10   // 10 points per second before 15 seconds
+        points *= (1 + it.accuracy).toInt()     // Increase by the accuracy of the guess
+        points
+      }
+    }.map { Pair(channel.jda.getUserById(it.key.discordId)?.name, it.value) }
+      .sortedByDescending { it.second }.toNumbered { "$first: $second" }
+
     // Average the score times and select the entry with the smallest value
     val fastestTime = scores.mapValues { it.value.sumByDouble { score -> score.time } / it.value.size }
       .minBy { entry -> entry.value }
@@ -163,6 +170,7 @@ class SongGuess(
       .addField("Fastest Average Time", "${time.first}: ${time.second}", true)
       .addField("Highest Average Accuracy", "${accuracy.first}: ${accuracy.second}", true)
       .addField("Most Correct Guesses", "${guessed.first}: ${guessed.second}", true)
+      .setDescription(scoreboard)
       .setColor(Color.WHITE)
       .setTimestamp(Instant.now())
       .build()
