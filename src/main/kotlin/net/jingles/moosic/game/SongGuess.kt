@@ -95,7 +95,7 @@ class SongGuess(
     val tracksToPlay = listOf(currentTrack.id)
 
     // Determines a random position in the track to begin playing at
-    val maxDuration = (currentTrack.durationMs * (1 - 0.75)).toInt()
+    val maxDuration = (currentTrack.durationMs * 0.80).toInt()
     val seekPosition = (0..maxDuration).random()
 
     try {
