@@ -409,6 +409,7 @@ class PagingObjectHandler<T: Any>(list: AbstractPagingObject<T>) : ListHandler<T
         list
       }
 
+      super.offset = offset
       return items
 
     }
@@ -426,6 +427,7 @@ class PagingObjectHandler<T: Any>(list: AbstractPagingObject<T>) : ListHandler<T
         list
       }
 
+      super.offset = offset
       return items
 
     }
