@@ -57,10 +57,11 @@ class SongGuess(
         scores[it.key]!!.add(Score(0.0, 15.0, false))
       }
 
-    channel.sendMessage("The correct $type was $editedName").queue()
-
     // Proceed to the next track
-    if (remove) tracks.removeFirst()
+    if (remove) {
+      channel.sendMessage("The correct $type was $editedName").queue()
+      tracks.removeFirst()
+    }
 
     // End the game when all of the tracks are gone
     if (tracks.isEmpty()) {
