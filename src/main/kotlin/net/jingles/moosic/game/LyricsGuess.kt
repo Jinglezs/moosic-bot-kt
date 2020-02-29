@@ -17,6 +17,7 @@ import java.util.*
 import kotlin.time.ExperimentalTime
 import kotlin.time.MonoClock
 
+private const val SUCCESS_LIMIT = 0.5
 private val ALPHANUMERIC = Regex("\\w")
 
 @ExperimentalTime
@@ -54,10 +55,10 @@ class LyricsGuess(
     // Add the worst possible score for those who did not earn one
     scores.filterValues { it.size < getRoundNumber() }
       .forEach {
-        scores[it.key]!!.add(Score(0.0, 10.0, false))
+        scores[it.key]!!.add(Score(0.0, 15.0, false))
       }
 
-    channel.sendMessage("The correct response was ${currentPrompt.second}").queue()
+    channel.sendMessage("The correct response was \"${currentPrompt.second}\"").queue()
 
     // Proceed to the next track
     if (remove) lyricPrompts.removeFirst()
@@ -67,7 +68,7 @@ class LyricsGuess(
       endGame(); return
     }
 
-    strippedResponse = currentPrompt.second.filter { it.isLetterOrDigit() || it.isWhitespace() }.trim()
+    strippedResponse = currentPrompt.second.filter { it.isLetterOrDigit() }.trim()
 
     // Marks the time this round began
     clockMark = MonoClock.markNow()
@@ -143,7 +144,7 @@ class LyricsGuess(
       val lines = getLyrics(url).random().second.split("\n").toList()
 
       // The line we want the user to respond with
-      val answer = lines.random()
+      val answer = lines.filterNot { it.isBlank() }.random()
 
       // Replace the letters/numbers with blanks
       val blanks = answer.replace(ALPHANUMERIC, "_")
@@ -151,7 +152,7 @@ class LyricsGuess(
       // Join the lines into a single prompt String
       val prompt = lines.joinToString("\n").replace(answer, blanks)
 
-      Pair(prompt, answer)
+      Pair(prompt, answer.filter { it.isLetterOrDigit() })
 
     }
 
@@ -169,7 +170,8 @@ class LyricsGuess(
    */
   private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
 
-    val accuracy = strippedResponse.toLowerCase().percentMatch(guess)
+    val strippedGuess = guess.filter { it.isLetterOrDigit() }
+    val accuracy = strippedResponse.toLowerCase().percentMatch(strippedGuess)
     if (accuracy < SUCCESS_LIMIT) return null
 
     val score = Score(accuracy, clockMark.elapsedNow().inSeconds, true)

@@ -19,7 +19,7 @@ import kotlin.time.MonoClock
  * The proportion of a player's guess that must match the song
  * title in order for it to be considered correct.
  */
-const val SUCCESS_LIMIT = 0.70
+private const val SUCCESS_LIMIT = 0.70
 
 @ExperimentalTime
 class SongGuess(
@@ -54,7 +54,7 @@ class SongGuess(
     // Add the worst possible score for those who did not earn one
     scores.filterValues { it.size < getRoundNumber() }
       .forEach {
-        scores[it.key]!!.add(Score(0.0, 10.0, false))
+        scores[it.key]!!.add(Score(0.0, 15.0, false))
       }
 
     channel.sendMessage("The correct $type was $editedName").queue()
