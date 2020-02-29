@@ -36,20 +36,25 @@ class SongGuess(
   private lateinit var editedName: String
 
   init {
-
-    channel.jda.addEventListener(this)
     channel.sendMessage("A game of Song Guess has been created. Send >join to play >:V").queue()
-
-    registerGameCommand(">start") { _, _ -> start().let { true }}
-    registerGameCommand(">join") { event, client ->
-        players.add(client)
-        channel.sendMessage("${event.author.name} has joined the game!").queue()
-        return@registerGameCommand true
-    }
-
+    registerGameCommands()
   }
 
   private fun getRoundNumber() = (rounds - tracks.size) + 1
+
+  override fun registerGameCommands() {
+
+    registerGameCommand(">start") { _, _ -> start().let { true }}
+
+    registerGameCommand(">join") { event, client ->
+      players.add(client)
+      channel.sendMessage("${event.author.name} has joined the game!").queue()
+      return@registerGameCommand true
+    }
+
+    super.registerGameCommands()
+
+  }
 
   override fun start() {
     started = true

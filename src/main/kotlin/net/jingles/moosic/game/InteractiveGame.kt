@@ -27,6 +27,9 @@ abstract class InteractiveGame(
 
   init {
     players.add(owner)
+  }
+
+  open fun registerGameCommands() {
     channel.jda.addEventListener(this)
   }
 

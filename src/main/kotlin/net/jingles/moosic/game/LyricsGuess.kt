@@ -30,18 +30,27 @@ class LyricsGuess(
 
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
 
-  val builder = EmbedBuilder()
+  private val builder = EmbedBuilder()
     .setTitle("Lyric Guess Prompt")
     .setColor(Color.WHITE)
     .setFooter("Powered by Genius", GENIUS_ICON)
 
   init {
+    channel.sendMessage("A game of Song Guess has been created. Send >join to play >:V").queue()
+    registerGameCommands()
+  }
+
+  override fun registerGameCommands() {
+
     registerGameCommand(">start") { _, _ -> start().let { true }}
+
     registerGameCommand(">join") { event, client ->
       players.add(client)
       channel.sendMessage("${event.author.name} has joined the game!").queue()
       return@registerGameCommand true
     }
+
+    super.registerGameCommands()
   }
 
   override fun start() {
