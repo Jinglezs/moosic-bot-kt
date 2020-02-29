@@ -192,7 +192,7 @@ class LyricsGuess(
       // Join the lines into a single prompt String
       val prompt = "```${lines.joinToString("\n")
         .replace(WHITESPACE, " ")
-        .replace(answer, blanks)}```".trim()
+        .replace(answer, blanks).trim()}```"
 
       LyricPrompt(pair.first, prompt, answer, answer.toLowerCase().filter { it.isLetterOrDigit() })
 
