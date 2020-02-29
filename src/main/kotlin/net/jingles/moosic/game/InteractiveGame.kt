@@ -67,7 +67,7 @@ abstract class InteractiveGame(
         ?: runBlocking { getSpotifyClient(event.author.idLong) } ?: return
 
       val result = game.commands.firstOrNull { it.trigger.equals(event.message.contentStripped, true) }
-        ?.executor?.invoke(event, client) ?: false
+        ?.executor?.invoke(event, client) ?: true
 
       if (game.started && result) game.onPlayerInput(event, client)
 
