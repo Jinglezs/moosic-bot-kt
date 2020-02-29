@@ -27,7 +27,6 @@ abstract class InteractiveGame(
 
   init {
     players.add(owner)
-    channel.jda.addEventListener(InteractiveGame::javaClass)
   }
 
   open fun registerGameCommands() {
@@ -39,6 +38,8 @@ abstract class InteractiveGame(
       channel.sendMessage("${event.author.name} has joined the game!").queue()
       true
     }
+
+    channel.jda.addEventListener(InputListener(this))
 
   }
 
@@ -53,26 +54,30 @@ abstract class InteractiveGame(
 
   fun unregisterGameCommand(trigger: String) = commands.removeIf { it.trigger.equals(trigger, true) }
 
-  @SubscribeEvent
-  fun onMessageReceived(event: MessageReceivedEvent) {
+  private class InputListener(private val game: InteractiveGame) {
 
-    println("Message event received")
+    @SubscribeEvent
+    fun onMessageReceived(event: MessageReceivedEvent) {
 
-    // Ignore messages from other channels, bots, or non-players
-    if (event.channel != channel || event.message.author.isBot) return
-    if (started && players.none { it.discordId == event.author.idLong }) return
+      println("Message event received")
 
-    val client: SpotifyClient = players.firstOrNull { it.discordId == event.author.idLong }
-      ?: runBlocking { getSpotifyClient(event.author.idLong) } ?: return
+      // Ignore messages from other channels, bots, or non-players
+      if (event.channel != game.channel || event.message.author.isBot) return
+      if (game.started && game.players.none { it.discordId == event.author.idLong }) return
 
-    println("Spotify client found")
+      val client: SpotifyClient = game.players.firstOrNull { it.discordId == event.author.idLong }
+        ?: runBlocking { getSpotifyClient(event.author.idLong) } ?: return
 
-    val result = commands.firstOrNull { it.trigger.equals(event.message.contentStripped, true) }
-      ?.executor?.invoke(event, client) ?: false
+      println("Spotify client found")
 
-    println("Attempted to invoke game command.")
+      val result = game.commands.firstOrNull { it.trigger.equals(event.message.contentStripped, true) }
+        ?.executor?.invoke(event, client) ?: false
 
-    if (started && result) onPlayerInput(event, client)
+      println("Attempted to invoke game command.")
+
+      if (game.started && result) game.onPlayerInput(event, client)
+
+    }
 
   }
 
