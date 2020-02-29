@@ -42,20 +42,6 @@ class SongGuess(
 
   private fun getRoundNumber() = (rounds - tracks.size) + 1
 
-  override fun registerGameCommands() {
-
-    registerGameCommand(">start") { _, _ -> start().let { true }}
-
-    registerGameCommand(">join") { event, client ->
-      players.add(client)
-      channel.sendMessage("${event.author.name} has joined the game!").queue()
-      return@registerGameCommand true
-    }
-
-    super.registerGameCommands()
-
-  }
-
   override fun start() {
     started = true
     channel.sendMessage("The game has started! You have 15 seconds to guess the __${type}__ of each song >:V").queue()

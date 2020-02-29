@@ -27,10 +27,19 @@ abstract class InteractiveGame(
 
   init {
     players.add(owner)
+    channel.jda.addEventListener(this)
   }
 
   open fun registerGameCommands() {
-    channel.jda.addEventListener(this)
+
+    registerGameCommand(">start") { _, _ -> start().let { true }}
+
+    registerGameCommand(">join") { event, client ->
+      players.add(client)
+      channel.sendMessage("${event.author.name} has joined the game!").queue()
+      true
+    }
+
   }
 
   abstract fun start();
@@ -44,8 +53,6 @@ abstract class InteractiveGame(
 
 
   fun unregisterGameCommand(trigger: String) = commands.removeIf { it.trigger.equals(trigger, true) }
-
-  fun addPlayer(client: SpotifyClient) = players.add(client)
 
   @SubscribeEvent
   fun onMessageReceived(event: MessageReceivedEvent) {

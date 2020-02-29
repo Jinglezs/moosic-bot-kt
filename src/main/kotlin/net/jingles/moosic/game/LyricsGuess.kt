@@ -40,19 +40,6 @@ class LyricsGuess(
     registerGameCommands()
   }
 
-  override fun registerGameCommands() {
-
-    registerGameCommand(">start") { _, _ -> start().let { true }}
-
-    registerGameCommand(">join") { event, client ->
-      players.add(client)
-      channel.sendMessage("${event.author.name} has joined the game!").queue()
-      return@registerGameCommand true
-    }
-
-    super.registerGameCommands()
-  }
-
   override fun start() {
     started = true
     channel.sendMessage("The game has started. Complete the missing line from the verse!").queue()
