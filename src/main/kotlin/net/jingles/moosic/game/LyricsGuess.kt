@@ -29,7 +29,6 @@ class LyricsGuess(
 
   private val lyricPrompts = populateLyricPrompts(owner)
   private val currentPrompt get() = lyricPrompts.peek()
-  private lateinit var strippedResponse: String
 
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
 
@@ -58,7 +57,7 @@ class LyricsGuess(
         scores[it.key]!!.add(Score(0.0, 15.0, false))
       }
 
-    channel.sendMessage("The correct response was \"${currentPrompt.second}\"").queue()
+    channel.sendMessage("The correct response was \"${currentPrompt.uneditedAnswer}\"").queue()
 
     // Proceed to the next track
     if (remove) lyricPrompts.removeFirst()
@@ -68,12 +67,10 @@ class LyricsGuess(
       endGame(); return
     }
 
-    strippedResponse = currentPrompt.second.filter { it.isLetterOrDigit() }.trim()
-
     // Marks the time this round began
     clockMark = MonoClock.markNow()
 
-    builder.setDescription(currentPrompt.first)
+    builder.setDescription(currentPrompt.prompt)
     channel.sendMessage(builder.build()).queue()
 
     // Start the next round after 10 seconds
@@ -129,10 +126,33 @@ class LyricsGuess(
 
   }
 
-  private fun populateLyricPrompts(owner: SpotifyClient): LinkedList<Pair<String, String>> {
+  private fun getRoundNumber() = (rounds - lyricPrompts.size) + 1
+
+  /**
+   * Determines whether or a player's guess is correct
+   * Returns a pair containing a boolean, where "true"
+   * means correct, and a Long that contains the true
+   * time it took for the player to guess.
+   */
+  private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
+
+    val strippedGuess = guess.toLowerCase().filter { it.isLetterOrDigit() }
+    val accuracy = currentPrompt.strippedAnswer.percentMatch(strippedGuess)
+    if (accuracy < SUCCESS_LIMIT) return null
+
+    val score = Score(accuracy, clockMark.elapsedNow().inSeconds, true)
+
+    if (!scores.containsKey(player)) scores[player] = mutableListOf()
+    scores[player]!!.add(score)
+
+    return score
+
+  }
+
+  private fun populateLyricPrompts(owner: SpotifyClient): LinkedList<LyricPrompt> {
 
     val tracks = owner.getRandomPlaylistTracks(rounds)
-    val pairs = LinkedList<Pair<String, String>>()
+    val pairs = LinkedList<LyricPrompt>()
 
     tracks.mapNotNull {
 
@@ -147,12 +167,12 @@ class LyricsGuess(
       val answer = lines.filterNot { it.isBlank() }.random()
 
       // Replace the letters/numbers with blanks
-      val blanks = answer.replace(ALPHANUMERIC, "_")
+      val blanks = answer.replace(ALPHANUMERIC, "\\_")
 
       // Join the lines into a single prompt String
       val prompt = lines.joinToString("\n").replace(answer, blanks)
 
-      Pair(prompt, answer.filter { it.isLetterOrDigit() })
+      LyricPrompt(prompt, answer, answer.toLowerCase().filter { it.isLetterOrDigit() })
 
     }
 
@@ -160,28 +180,6 @@ class LyricsGuess(
 
   }
 
-  private fun getRoundNumber() = (rounds - lyricPrompts.size) + 1
-
-  /**
-   * Determines whether or a player's guess is correct
-   * Returns a pair containing a boolean, where "true"
-   * means correct, and a Long that contains the true
-   * time it took for the player to guess.
-   */
-  private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
-
-    val strippedGuess = guess.filter { it.isLetterOrDigit() }
-    val accuracy = strippedResponse.toLowerCase().percentMatch(strippedGuess)
-    if (accuracy < SUCCESS_LIMIT) return null
-
-    val score = Score(accuracy, clockMark.elapsedNow().inSeconds, true)
-
-    if (!scores.containsKey(player)) scores[player] = mutableListOf()
-    scores[player]!!.add(score)
-
-    return score
-
-  }
-
-
 }
+
+private data class LyricPrompt(val prompt: String, val uneditedAnswer: String, val strippedAnswer: String)
