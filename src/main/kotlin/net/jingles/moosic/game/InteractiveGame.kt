@@ -27,7 +27,7 @@ abstract class InteractiveGame(
 
   init {
     players.add(owner)
-    channel.jda.addEventListener(this@InteractiveGame.javaClass)
+    channel.jda.addEventListener(InteractiveGame::javaClass)
   }
 
   open fun registerGameCommands() {
@@ -56,6 +56,8 @@ abstract class InteractiveGame(
   @SubscribeEvent
   fun onMessageReceived(event: MessageReceivedEvent) {
 
+    println("Message event received")
+
     // Ignore messages from other channels, bots, or non-players
     if (event.channel != channel || event.message.author.isBot) return
     if (started && players.none { it.discordId == event.author.idLong }) return
@@ -63,8 +65,12 @@ abstract class InteractiveGame(
     val client: SpotifyClient = players.firstOrNull { it.discordId == event.author.idLong }
       ?: runBlocking { getSpotifyClient(event.author.idLong) } ?: return
 
+    println("Spotify client found")
+
     val result = commands.firstOrNull { it.trigger.equals(event.message.contentStripped, true) }
       ?.executor?.invoke(event, client) ?: false
+
+    println("Attempted to invoke game command.")
 
     if (started && result) onPlayerInput(event, client)
 
