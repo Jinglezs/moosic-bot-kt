@@ -1,8 +1,6 @@
 package net.jingles.moosic.game
 
 import com.adamratzman.spotify.SpotifyException
-import com.adamratzman.spotify.models.SimplePlaylist
-import com.adamratzman.spotify.models.Track
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -10,14 +8,10 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
-import net.dv8tion.jda.api.hooks.SubscribeEvent
 import net.jingles.moosic.*
 import net.jingles.moosic.service.SpotifyClient
-import net.jingles.moosic.service.getSpotifyClient
 import java.awt.Color
 import java.time.Instant
-import java.util.*
-import kotlin.time.ClockMark
 import kotlin.time.ExperimentalTime
 import kotlin.time.MonoClock
 
@@ -29,50 +23,53 @@ const val SUCCESS_LIMIT = 0.70
 
 @ExperimentalTime
 class SongGuess(
-  private val channel: MessageChannel, owner: SpotifyClient,
-  private val type: String, private val rounds: Int
-) {
-
-  // State variables
-  private var started = false
-  private lateinit var clockMark: ClockMark
+  channel: MessageChannel,
+  owner: SpotifyClient,
+  private val type: String,
+  private val rounds: Int
+): InteractiveGame(channel, owner) {
 
   // Game information
-  private val players = mutableSetOf<SpotifyClient>()
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
-  private val tracks = populateTracks(owner, rounds)
+  private val tracks = owner.getRandomPlaylistTracks(rounds)
   private val currentTrack get() = tracks.peek()
   private lateinit var editedName: String
 
   init {
-    players.add(owner)
+
     channel.jda.addEventListener(this)
     channel.sendMessage("A game of Song Guess has been created. Send >join to play >:V").queue()
+
+    registerGameCommand(">start") { _, _ -> start().let { true }}
+    registerGameCommand(">join") { event, client ->
+        players.add(client)
+        channel.sendMessage("${event.author.name} has joined the game!").queue()
+        return@registerGameCommand true
+    }
+
   }
 
   private fun getRoundNumber() = (rounds - tracks.size) + 1
 
-  private suspend fun nextRound() {
+  override fun start() {
+    started = true
+    channel.sendMessage("The game has started! You have 15 seconds to guess the __${type}__ of each song >:V").queue()
+    unregisterGameCommand(">start"); unregisterGameCommand(">join")
+    nextRound()
+  }
 
-    if (started) {
+  private fun nextRound() {
 
-      // Add the worst possible score for those who did not earn one
-      scores.filterValues { it.size < getRoundNumber() }
-        .forEach {
-          scores[it.key]!!.add(Score(0.0, 10.0, false))
-        }
+    // Add the worst possible score for those who did not earn one
+    scores.filterValues { it.size < getRoundNumber() }
+      .forEach {
+        scores[it.key]!!.add(Score(0.0, 10.0, false))
+      }
 
-      channel.sendMessage("The correct $type was $editedName").queue()
+    channel.sendMessage("The correct $type was $editedName").queue()
 
-      // Proceed to the next track
-      tracks.removeFirst()
-
-    } else {
-
-      started = true
-      channel.sendMessage("The game has started! You have 15 seconds to guess the __${type}__ of each song >:V").queue()
-
-    }
+    // Proceed to the next track
+    tracks.removeFirst()
 
     // End the game when all of the tracks are gone
     if (tracks.isEmpty()) {
@@ -103,8 +100,8 @@ class SongGuess(
       players.forEach {
 
         with(it.clientAPI.player) {
-          startPlayback(tracksToPlay = tracksToPlay).suspendQueue()// Play the track
-          seek(seekPosition.toLong()).suspendQueue() // Skip to a random position
+          startPlayback(tracksToPlay = tracksToPlay).complete() // Play the track
+          seek(seekPosition.toLong()).queue().complete() // Skip to a random position
         }
 
       }
@@ -125,7 +122,7 @@ class SongGuess(
 
   }
 
-  private fun endGame() {
+  override fun endGame() {
 
     val scoreboard = scores.mapValues { entry ->
       entry.value.sumBy {
@@ -200,74 +197,16 @@ class SongGuess(
 
   }
 
-  private fun populateTracks(spotify: SpotifyClient, rounds: Int): LinkedList<Track> {
-
-    val populatedList = LinkedList<Track>()
-
-    val playlists = spotify.clientAPI.playlists.getClientPlaylists().complete().items
-    val erroneousPlaylists = mutableListOf<SimplePlaylist>()
-
-    while (populatedList.size < rounds) {
-
-      val simple = playlists.random()
-      if (erroneousPlaylists.contains(simple)) continue
-
-      try {
-
-        val full = simple.toFullPlaylist().complete() ?: continue
-
-        val track = full.tracks.random().track
-        if (track != null) populatedList.add(track)
-
-      } catch (exception: Exception) {
-        erroneousPlaylists.add(simple)
-        println("Error parsing playlist: Local track files are currently unsupported.")
-        continue
-      }
-
-    }
-
-    return populatedList
-
-  }
-
-  @SubscribeEvent
-  fun onGuess(event: MessageReceivedEvent) {
-
-    // Ignore messages from other channels or bots
-    if (event.channel != channel || event.message.author.isBot) return
+  override fun onPlayerInput(event: MessageReceivedEvent, client: SpotifyClient) {
 
     // Strip the message of formatted to facilitate comparisons
     val guess = event.message.contentStripped
 
-    // Allow players to join/start the game
-    if (!started) {
-
-      GlobalScope.launch {
-
-        when (guess.toLowerCase()) {
-          ">start" -> nextRound()
-          ">join" -> {
-
-            val client = getSpotifyClient(event.author.idLong) ?: return@launch
-            players.add(client)
-            channel.sendMessage("${event.author.name} has joined the game!").queue()
-
-          }
-        }
-
-      }
-
-      return
-    }
-
-    val spotify = players.find { it.discordId == event.author.idLong }!!
-
     // Do not verify guesses after the player has a score for the current round
-    if (scores[spotify]?.size == getRoundNumber()) return
+    if (scores[client]?.size == getRoundNumber()) return
 
     // Gets a decimal that reflects the accuracy
-    val score = verifyGuess(spotify, event.message.contentStripped.toLowerCase().trim()) ?: return
+    val score = verifyGuess(client, guess.toLowerCase().trim()) ?: return
 
     // Delete the message so other players can't copy it
     if (channel.type == ChannelType.TEXT) event.message.delete().reason("Song Guess").queue()
@@ -280,5 +219,3 @@ class SongGuess(
   }
 
 }
-
-private data class Score(val accuracy: Double, val time: Double, val guessed: Boolean)

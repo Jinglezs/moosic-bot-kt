@@ -4,10 +4,12 @@ import com.adamratzman.spotify.models.*
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageChannel
+import net.jingles.moosic.service.SpotifyClient
 import java.text.NumberFormat
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.*
 
 private const val BOLD = "**%s**"
 
@@ -87,4 +89,37 @@ private fun levenshtein(lhs : CharSequence, rhs : CharSequence) : Int {
   }
 
   return cost[lhsLength - 1]
+}
+
+// Spotify stuffs
+
+fun SpotifyClient.getRandomPlaylistTracks(limit: Int): LinkedList<Track> {
+
+  val populatedList = LinkedList<Track>()
+
+  val playlists = clientAPI.playlists.getClientPlaylists().complete().items
+  val erroneousPlaylists = mutableListOf<SimplePlaylist>()
+
+  while (populatedList.size < limit) {
+
+    val simple = playlists.random()
+    if (erroneousPlaylists.contains(simple)) continue
+
+    try {
+
+      val full = simple.toFullPlaylist().complete() ?: continue
+
+      val track = full.tracks.random().track
+      if (track != null) populatedList.add(track)
+
+    } catch (exception: Exception) {
+      erroneousPlaylists.add(simple)
+      println("Error parsing playlist: Local track files are currently unsupported.")
+      continue
+    }
+
+  }
+
+  return populatedList
+
 }
