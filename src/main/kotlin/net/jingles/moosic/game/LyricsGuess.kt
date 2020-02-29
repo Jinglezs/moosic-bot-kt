@@ -33,7 +33,6 @@ class LyricsGuess(
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
 
   private val builder = EmbedBuilder()
-    .setTitle("Lyric Guess Prompt")
     .setColor(Color.WHITE)
     .setFooter("Powered by Genius", GENIUS_ICON)
 
@@ -54,13 +53,14 @@ class LyricsGuess(
     // Add the worst possible score for those who did not earn one
     scores.filterValues { it.size < getRoundNumber() }
       .forEach {
-        scores[it.key]!!.add(Score(0.0, 15.0, false))
+        scores[it.key]!!.add(Score(0.0, 20.0, false))
       }
 
-    channel.sendMessage("The correct response was \"${currentPrompt.uneditedAnswer}\"").queue()
-
     // Proceed to the next track
-    if (remove) lyricPrompts.removeFirst()
+    if (remove) {
+      channel.sendMessage("The correct response was \"${currentPrompt.uneditedAnswer}\"").queue()
+      lyricPrompts.removeFirst()
+    }
 
     // End the game when all of the tracks are gone
     if (lyricPrompts.isEmpty()) {
@@ -70,12 +70,16 @@ class LyricsGuess(
     // Marks the time this round began
     clockMark = MonoClock.markNow()
 
-    builder.setDescription(currentPrompt.prompt)
+    with (currentPrompt) {
+      builder.setTitle("Round ${getRoundNumber()} - $info")
+      builder.setDescription(prompt)
+    }
+
     channel.sendMessage(builder.build()).queue()
 
     // Start the next round after 10 seconds
     GlobalScope.launch {
-      delay(15_000)
+      delay(20_000)
       nextRound()
     }
 
@@ -157,22 +161,24 @@ class LyricsGuess(
     tracks.mapNotNull {
 
       val info = it.toSimpleTrackInfo()
-      search(info).maxBy { result -> info.percentMatch(result.title) }?.url
+      val url = search(info).maxBy { result -> info.percentMatch(result.title) }?.url
 
-    }.mapTo(pairs) { url ->
+      if (url == null) null else  Pair(info, url)
 
-      val lines = getLyrics(url).random().second.split("\n").toList()
+    }.mapTo(pairs) { pair ->
+
+      val lines = getLyrics(pair.second).random().second.split("\n").toList()
 
       // The line we want the user to respond with
       val answer = lines.filterNot { it.isBlank() }.random()
 
       // Replace the letters/numbers with blanks
-      val blanks = answer.replace(ALPHANUMERIC, "\\_")
+      val blanks = answer.replace(ALPHANUMERIC, "_")
 
       // Join the lines into a single prompt String
-      val prompt = lines.joinToString("\n").replace(answer, blanks)
+      val prompt = "```${lines.joinToString("\n").replace(answer, blanks)}```"
 
-      LyricPrompt(prompt, answer, answer.toLowerCase().filter { it.isLetterOrDigit() })
+      LyricPrompt(pair.first, prompt, answer, answer.toLowerCase().filter { it.isLetterOrDigit() })
 
     }
 
@@ -182,4 +188,4 @@ class LyricsGuess(
 
 }
 
-private data class LyricPrompt(val prompt: String, val uneditedAnswer: String, val strippedAnswer: String)
+private data class LyricPrompt(val info: String, val prompt: String, val uneditedAnswer: String, val strippedAnswer: String)
