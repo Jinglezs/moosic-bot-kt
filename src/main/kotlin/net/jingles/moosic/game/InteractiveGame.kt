@@ -27,7 +27,7 @@ abstract class InteractiveGame(
 
   init {
     players.add(owner)
-    channel.jda.addEventListener(this)
+    channel.jda.addEventListener(this@InteractiveGame.javaClass)
   }
 
   open fun registerGameCommands() {
@@ -50,7 +50,6 @@ abstract class InteractiveGame(
 
   fun registerGameCommand(trigger: String, executor: (MessageReceivedEvent, SpotifyClient) -> Boolean) =
     commands.add(GameCommand(trigger, executor))
-
 
   fun unregisterGameCommand(trigger: String) = commands.removeIf { it.trigger.equals(trigger, true) }
 
