@@ -172,7 +172,12 @@ class LyricsGuess(
     }.mapNotNull {
 
       try {
-        Pair(it.first, getLyrics(it.second).random().second.split("\n").toList())
+
+        val line = getLyrics(it.second).filterNot { pair -> pair.second.isBlank() }
+          .random().second.split("\n").toList()
+
+        Pair(it.first, line)
+
       } catch (e: NoSuchElementException) {
         null
       }
