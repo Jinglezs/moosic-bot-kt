@@ -22,7 +22,7 @@ class LyricsGuess(
   channel: MessageChannel,
   owner: SpotifyClient,
   private val rounds: Int
-): InteractiveGame(channel, owner) {
+) : InteractiveGame(channel, owner) {
 
   private val lyricPrompts = populateLyricPrompts(owner)
   private val currentPrompt get() = lyricPrompts.peek()
@@ -131,11 +131,14 @@ class LyricsGuess(
     val tracks = owner.getRandomPlaylistTracks(rounds)
     val pairs = LinkedList<Pair<String, String>>()
 
-    tracks.mapTo(pairs) { track ->
+    tracks.mapNotNull {
 
-      val info = track.toSimpleTrackInfo()
-      val songUrl = search(info).maxBy {result -> info.percentMatch(result.title) }?.url
-      val lines = getLyrics(songUrl!!).random().second.split("\n").toList()
+      val info = it.toSimpleTrackInfo()
+      search(info).maxBy { result -> info.percentMatch(result.title) }?.url
+
+    }.mapTo(pairs) { url ->
+
+      val lines = getLyrics(url).random().second.split("\n").toList()
 
       // The line we want the user to respond with
       val answer = lines.random()
