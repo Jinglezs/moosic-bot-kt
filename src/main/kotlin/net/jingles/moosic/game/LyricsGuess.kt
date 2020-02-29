@@ -72,7 +72,7 @@ class LyricsGuess(
     // Marks the time this round began
     clockMark = MonoClock.markNow()
 
-    with (currentPrompt) {
+    with(currentPrompt) {
       builder.setTitle("Round ${getRoundNumber()} - $info")
       builder.setDescription(prompt)
     }
@@ -167,18 +167,23 @@ class LyricsGuess(
       val info = it.toSimpleTrackInfo()
       val url = search(info).maxBy { result -> info.percentMatch(result.title) }?.url
 
-      if (url == null) null else  Pair(info, url)
+      if (url == null) null else Pair(info, url)
+
+    }.mapNotNull {
+
+      try {
+        Pair(it.first, getLyrics(it.second).random().second.split("\n").toList())
+      } catch (e: NoSuchElementException) {
+        null
+      }
 
     }.mapTo(prompts) { pair ->
 
-      val lines = getLyrics(pair.second).random().second.split("\n").toList()
-
+      val lines = pair.second
       // The line we want the user to respond with
       val answer = lines.filterNot { it.isBlank() }.random()
-
       // Replace the letters/numbers with blanks
       val blanks = answer.replace(ALPHANUMERIC, "_")
-
       // Join the lines into a single prompt String
       val prompt = "```${lines.joinToString("\n")
         .replace(WHITESPACE, " ")
@@ -194,4 +199,9 @@ class LyricsGuess(
 
 }
 
-private data class LyricPrompt(val info: String, val prompt: String, val uneditedAnswer: String, val strippedAnswer: String)
+private data class LyricPrompt(
+  val info: String,
+  val prompt: String,
+  val uneditedAnswer: String,
+  val strippedAnswer: String
+)
