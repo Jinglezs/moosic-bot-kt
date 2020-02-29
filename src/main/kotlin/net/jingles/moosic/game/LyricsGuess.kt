@@ -18,7 +18,9 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.MonoClock
 
 private const val SUCCESS_LIMIT = 0.5
+
 private val ALPHANUMERIC = Regex("\\w")
+private val WHITESPACE = Regex("[\\s\\p{Z}]+")
 
 @ExperimentalTime
 class LyricsGuess(
@@ -90,7 +92,7 @@ class LyricsGuess(
     val scoreboard = scores.mapValues { entry ->
       entry.value.sumBy {
         var points = if (it.guessed) 100 else 0 // 100 points for guessing
-        points += (15 - it.time).toInt() * 10   // 10 points per second before 15 seconds
+        points += (20 - it.time).toInt() * 10   // 10 points per second before 15 seconds
         points *= (1 + it.accuracy).toInt()     // Increase by the accuracy of the guess
         points
       }
@@ -141,7 +143,9 @@ class LyricsGuess(
   private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
 
     val strippedGuess = guess.toLowerCase().filter { it.isLetterOrDigit() }
-    val accuracy = currentPrompt.strippedAnswer.percentMatch(strippedGuess)
+    val strippedAnswer = currentPrompt?.strippedAnswer ?: return null
+
+    val accuracy = strippedAnswer.percentMatch(strippedGuess)
     if (accuracy < SUCCESS_LIMIT) return null
 
     val score = Score(accuracy, clockMark.elapsedNow().inSeconds, true)
@@ -156,7 +160,7 @@ class LyricsGuess(
   private fun populateLyricPrompts(owner: SpotifyClient): LinkedList<LyricPrompt> {
 
     val tracks = owner.getRandomPlaylistTracks(rounds)
-    val pairs = LinkedList<LyricPrompt>()
+    val prompts = LinkedList<LyricPrompt>()
 
     tracks.mapNotNull {
 
@@ -165,7 +169,7 @@ class LyricsGuess(
 
       if (url == null) null else  Pair(info, url)
 
-    }.mapTo(pairs) { pair ->
+    }.mapTo(prompts) { pair ->
 
       val lines = getLyrics(pair.second).random().second.split("\n").toList()
 
@@ -176,13 +180,15 @@ class LyricsGuess(
       val blanks = answer.replace(ALPHANUMERIC, "_")
 
       // Join the lines into a single prompt String
-      val prompt = "```${lines.joinToString("\n").replace(answer, blanks)}```"
+      val prompt = "```${lines.joinToString("\n")
+        .replace(WHITESPACE, " ")
+        .replace(answer, blanks)}```".trim()
 
       LyricPrompt(pair.first, prompt, answer, answer.toLowerCase().filter { it.isLetterOrDigit() })
 
     }
 
-    return pairs
+    return prompts
 
   }
 
