@@ -46,10 +46,10 @@ class SongGuess(
     started = true
     channel.sendMessage("The game has started! You have 15 seconds to guess the __${type}__ of each song >:V").queue()
     unregisterGameCommand(">start"); unregisterGameCommand(">join")
-    nextRound()
+    nextRound(false)
   }
 
-  private fun nextRound() {
+  private fun nextRound(remove: Boolean = true) {
 
     // Add the worst possible score for those who did not earn one
     scores.filterValues { it.size < getRoundNumber() }
@@ -60,7 +60,7 @@ class SongGuess(
     channel.sendMessage("The correct $type was $editedName").queue()
 
     // Proceed to the next track
-    tracks.removeFirst()
+    if (remove) tracks.removeFirst()
 
     // End the game when all of the tracks are gone
     if (tracks.isEmpty()) {

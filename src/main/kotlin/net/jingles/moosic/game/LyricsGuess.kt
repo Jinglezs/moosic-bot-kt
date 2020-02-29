@@ -17,6 +17,8 @@ import java.util.*
 import kotlin.time.ExperimentalTime
 import kotlin.time.MonoClock
 
+private val ALPHANUMERIC = Regex("\\w")
+
 @ExperimentalTime
 class LyricsGuess(
   channel: MessageChannel,
@@ -44,10 +46,10 @@ class LyricsGuess(
     started = true
     channel.sendMessage("The game has started. Complete the missing line from the verse!").queue()
     unregisterGameCommand(">start"); unregisterGameCommand(">join")
-    nextRound()
+    nextRound(false)
   }
 
-  private fun nextRound() {
+  private fun nextRound(remove: Boolean = true) {
 
     // Add the worst possible score for those who did not earn one
     scores.filterValues { it.size < getRoundNumber() }
@@ -58,7 +60,7 @@ class LyricsGuess(
     channel.sendMessage("The correct response was ${currentPrompt.second}").queue()
 
     // Proceed to the next track
-    lyricPrompts.removeFirst()
+    if (remove) lyricPrompts.removeFirst()
 
     // End the game when all of the tracks are gone
     if (lyricPrompts.isEmpty()) {
@@ -144,8 +146,7 @@ class LyricsGuess(
       val answer = lines.random()
 
       // Replace the letters/numbers with blanks
-      val blanks = answer.toCharArray().filter { it.isWhitespace() || it.isLetterOrDigit() }
-        .map { if (it.isWhitespace()) ' ' else '_' }.toString()
+      val blanks = answer.replace(ALPHANUMERIC, "_")
 
       // Join the lines into a single prompt String
       val prompt = lines.joinToString("\n").replace(answer, blanks)

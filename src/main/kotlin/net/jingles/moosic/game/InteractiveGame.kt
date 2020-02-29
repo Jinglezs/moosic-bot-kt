@@ -59,8 +59,6 @@ abstract class InteractiveGame(
     @SubscribeEvent
     fun onMessageReceived(event: MessageReceivedEvent) {
 
-      println("Message event received")
-
       // Ignore messages from other channels, bots, or non-players
       if (event.channel != game.channel || event.message.author.isBot) return
       if (game.started && game.players.none { it.discordId == event.author.idLong }) return
@@ -68,12 +66,8 @@ abstract class InteractiveGame(
       val client: SpotifyClient = game.players.firstOrNull { it.discordId == event.author.idLong }
         ?: runBlocking { getSpotifyClient(event.author.idLong) } ?: return
 
-      println("Spotify client found")
-
       val result = game.commands.firstOrNull { it.trigger.equals(event.message.contentStripped, true) }
         ?.executor?.invoke(event, client) ?: false
-
-      println("Attempted to invoke game command.")
 
       if (game.started && result) game.onPlayerInput(event, client)
 
