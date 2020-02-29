@@ -20,7 +20,7 @@ import kotlin.time.MonoClock
 private const val SUCCESS_LIMIT = 0.5
 
 private val ALPHANUMERIC = Regex("\\w")
-private val WHITESPACE = Regex("[\\V\\s\\p{Z}^\n]+")
+private val WHITESPACE = Regex("[\\p{Zs}]+")
 
 @ExperimentalTime
 class LyricsGuess(
