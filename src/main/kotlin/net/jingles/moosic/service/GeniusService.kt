@@ -5,7 +5,7 @@ import org.jsoup.Jsoup
 
 private val token: String = System.getenv("genius_token")
 
-data class SearchResult(val title: String, val url: String)
+data class SearchResult(val title: String, val artist: String, val url: String)
 
 fun search(query: String): List<SearchResult> {
 
@@ -14,8 +14,16 @@ fun search(query: String): List<SearchResult> {
     params = mapOf("q" to query, "access_token" to token)
   ).jsonObject.getJSONObject("response").getJSONArray("hits")
 
-  return hitArray.map { (it as JSONObject).getJSONObject("result") }
-    .map { SearchResult(it.getString("full_title"), it.getString("url")) }
+  return hitArray.asSequence().map { (it as JSONObject) }
+    .filter { it.getString("type") == "song" }
+    .map { it.getJSONObject("result") }
+    .filter { it.getString("type") == "song" }
+    .map {
+
+      val artist = it.getJSONObject("primary_artist").getString("name")
+      SearchResult(it.getString("title"), artist, it.getString("url"))
+
+    }.toList()
 
 }
 

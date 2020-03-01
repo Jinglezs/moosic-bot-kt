@@ -164,10 +164,12 @@ class LyricsGuess(
 
     tracks.mapNotNull {
 
-      val info = it.toSimpleTrackInfo()
-      val url = search(info).maxBy { result -> info.percentMatch(result.title) }?.url
+      val url = search(it.toSearchQuery())
+        .firstOrNull { result ->
+          it.name == result.title && it.artists.any { artist -> artist.name == result.artist }
+        }?.url
 
-      if (url == null) null else Pair(info, url)
+      if (url == null) null else Pair(it.toSimpleTrackInfo(), url)
 
     }.mapNotNull {
 

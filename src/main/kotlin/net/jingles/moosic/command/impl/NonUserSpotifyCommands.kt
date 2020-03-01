@@ -82,7 +82,7 @@ class LyricsCommand : Command() {
 
         val client = getSpotifyClient(context.event.author.idLong)?.clientAPI
 
-        client?.player?.getCurrentlyPlaying()?.complete()?.track?.toSimpleTrackInfo()
+        client?.player?.getCurrentlyPlaying()?.complete()?.track?.toSearchQuery()
           ?: throw CommandException("No query was provided and a song is not playing on Spotify >:V")
       }
 
@@ -93,7 +93,9 @@ class LyricsCommand : Command() {
       composer = {
 
         val boldIndex = currentSelection - 1
-        val description = currentElements.toNumbered(handler!!.offset, boldIndex) { title }
+
+        val description = if (currentElements.isEmpty()) "No results were found."
+        else currentElements.toNumbered(handler!!.offset, boldIndex) { title }
 
         builder.setDescription(description)
         builder.setFooter("Powered by Genius", GENIUS_ICON)
@@ -101,8 +103,8 @@ class LyricsCommand : Command() {
       }, afterSelection = { selection ->
 
         getLyrics(selection.url).forEach { builder.addField(it.first, it.second, false) }
-
-        builder.setTitle(selection.title).setDescription(null).build()
+        
+        builder.setTitle("${selection.title} by ${selection.artist}").setDescription(null).build()
 
       }).create(context.event.channel)
 
