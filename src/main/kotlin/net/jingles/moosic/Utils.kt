@@ -51,7 +51,7 @@ fun SimpleTrack.toTrackInfo() = "$name by ${artists.toNames()}"
 
 fun Track.toSimpleTrackInfo() = "$name by ${artists.toNames()}"
 
-fun Track.toSearchQuery() = "$name%20${artists.first().name}"
+fun Track.toSearchQuery() = "$name ${artists.first().name}"
 
 fun SimpleAlbum.toAlbumInfo() = "$name by ${artists.toNames()}"
 

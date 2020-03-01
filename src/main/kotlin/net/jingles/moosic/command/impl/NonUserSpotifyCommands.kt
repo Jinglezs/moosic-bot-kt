@@ -76,7 +76,7 @@ class LyricsCommand : Command() {
 
     val query = when {
 
-      context.getArgCount() != 0 -> context.arguments.joinToString("%20")
+      context.getArgCount() != 0 -> context.arguments.joinToString(" ")
 
       else -> {
 

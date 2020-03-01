@@ -9,12 +9,14 @@ data class SearchResult(val title: String, val artist: String, val url: String)
 
 fun search(query: String): List<SearchResult> {
 
-  val hitArray = khttp.get(
+  return khttp.get(
+
     url = "https://api.genius.com/search",
     params = mapOf("q" to query, "access_token" to token)
-  ).jsonObject.getJSONObject("response").getJSONArray("hits")
 
-  return hitArray.asSequence().map { (it as JSONObject) }
+  ).jsonObject.getJSONObject("response").getJSONArray("hits")
+    .asSequence()
+    .map { it as JSONObject }
     .filter { it.getString("type") == "song" }
     .map { it.getJSONObject("result") }
     .map {
