@@ -95,7 +95,7 @@ class LyricsCommand : Command() {
         val boldIndex = currentSelection - 1
 
         val description = if (currentElements.isEmpty()) "No results were found."
-        else currentElements.toNumbered(handler!!.offset, boldIndex) { title }
+        else currentElements.toNumbered(handler!!.offset, boldIndex) { "$title by $artist" }
 
         builder.setDescription(description)
         builder.setFooter("Powered by Genius", GENIUS_ICON)

@@ -231,8 +231,13 @@ class PaginatedSelection<T : Any>(
       val embed = when(direction) {
         -1, 1 -> render(direction)
         else -> {
+
           stop()
-          afterSelection.invoke(this@PaginatedSelection, currentElements[currentSelection - 1])
+
+          if (currentElements.isNotEmpty())
+            afterSelection.invoke(this@PaginatedSelection, currentElements[currentSelection - 1])
+          else builder.setDescription("No elements were found.").build()
+
         }
       }
 
