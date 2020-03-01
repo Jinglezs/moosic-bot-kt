@@ -17,7 +17,6 @@ fun search(query: String): List<SearchResult> {
   return hitArray.asSequence().map { (it as JSONObject) }
     .filter { it.getString("type") == "song" }
     .map { it.getJSONObject("result") }
-    .filter { it.getString("type") == "song" }
     .map {
 
       val artist = it.getJSONObject("primary_artist").getString("name")
