@@ -39,7 +39,7 @@ class LyricsGuess(
     .setFooter("Powered by Genius", GENIUS_ICON)
 
   init {
-    channel.sendMessage("A game of Song Guess has been created. Send >join to play >:V").queue()
+    channel.sendMessage("A game of Lyric Guess has been created. Send >join to play >:V").queue()
     registerGameCommands()
   }
 
@@ -176,7 +176,7 @@ class LyricsGuess(
       try {
 
         val line = getLyrics(it.second).filterNot { pair -> pair.second.isBlank() }
-          .random().second.split("\n").toList()
+          .random().second.split("\n")
 
         Pair(it.first, line)
 
@@ -200,6 +200,7 @@ class LyricsGuess(
 
     }
 
+    println("Collected ${prompts.size} prompts")
     return prompts
 
   }

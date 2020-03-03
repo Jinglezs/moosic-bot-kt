@@ -103,6 +103,8 @@ class SongGuess(
       nextRound(); return
     }
 
+    channel.sendMessage("Round ${getRoundNumber()}").queue()
+
     // Marks the time this round began
     clockMark = MonoClock.markNow()
 
