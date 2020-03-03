@@ -173,22 +173,14 @@ class LyricsGuess(
 
     }.mapNotNull {
 
-      try {
-
-        val line = getLyrics(it.second).filterNot { pair -> pair.second.isBlank() }
-          .random().second.split("\n")
-
-        Pair(it.first, line)
-
-      } catch (e: NoSuchElementException) {
-        null
-      }
+      val verse = getLyrics(it.second).filter { pair -> pair.second.isNotBlank() }
+      if (verse.isEmpty()) null else Pair(it.first, verse.random().second.split("\n"))
 
     }.mapTo(prompts) { pair ->
 
       val lines = pair.second
       // The line we want the user to respond with
-      val answer = lines.filterNot { it.isBlank() }.random()
+      val answer = lines.filter { it.isNotBlank() }.random()
       // Replace the letters/numbers with blanks
       val blanks = answer.replace(ALPHANUMERIC, "_")
       // Join the lines into a single prompt String
@@ -200,7 +192,10 @@ class LyricsGuess(
 
     }
 
-    println("Collected ${prompts.size} prompts")
+    //TODO: Remove debug message
+    val debug = prompts.toNumbered { info }
+    println("\n\n$debug\n\n")
+
     return prompts
 
   }
