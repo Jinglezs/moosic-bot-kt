@@ -157,40 +157,32 @@ class LyricsGuess(
 
   }
 
-  private fun populateLyricPrompts(owner: SpotifyClient): LinkedList<LyricPrompt> {
+  private fun populateLyricPrompts(client: SpotifyClient): LinkedList<LyricPrompt> {
 
-    val tracks = getRandomPlaylistTracks(owner, rounds)
     val prompts = LinkedList<LyricPrompt>()
 
-    //TODO: Remove debug message
-    println("\n\n${tracks.toNumbered { toSimpleTrackInfo() }}\n\n")
+    while (prompts.size < rounds) {
 
-    tracks.mapNotNull {
+      val track = getRandomPlaylistTracks(client, 1).first()
 
-      val url = search(it.toSearchQuery())
-        .firstOrNull { result ->
-          it.name == result.title && it.artists.any { artist -> artist.name == result.artist }
-        }?.url
+      val url = search(track.toSearchQuery()).firstOrNull() {
+        track.artists.any { artist -> artist.name.equals(it.artist, true) }
+          && track.name.equals(it.title, true)
+      }?.url ?: continue
 
-      if (url == null) null else Pair(it.toSimpleTrackInfo(), url)
+      val verse = getLyrics(url).random().second.split("\n")
 
-    }.map {
-      Pair(it.first, getLyrics(it.second))
-    }.mapRandomly(10) {
-      Pair(first, second.random().second.split("\n"))
-    }.mapTo(prompts) { pair ->
-
-      val lines = pair.second
       // The line we want the user to respond with
-      val answer = lines.filter { it.isNotBlank() }.random()
+      val answer = verse.filter { it.isNotBlank() }.random()
       // Replace the letters/numbers with blanks
       val blanks = answer.replace(ALPHANUMERIC, "_")
       // Join the lines into a single prompt String
-      val prompt = "```${lines.joinToString("\n")
+      val msg = "```${verse.joinToString("\n")
         .replace(WHITESPACE, " ")
         .replace(answer, blanks).trim()}```"
 
-      LyricPrompt(pair.first, prompt, answer, answer.toLowerCase().filter { it.isLetterOrDigit() })
+      prompts.add(LyricPrompt(track.toSimpleTrackInfo(), msg, answer,
+        answer.toLowerCase().filter { c -> c.isLetterOrDigit() }))
 
     }
 
