@@ -176,7 +176,7 @@ class LyricsGuess(
 
     }.map {
       Pair(it.first, getLyrics(it.second))
-    }.mapRandomly(1) {
+    }.mapRandomly(10) {
       Pair(first, second.random().second.split("\n"))
     }.mapTo(prompts) { pair ->
 
