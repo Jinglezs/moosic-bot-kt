@@ -68,6 +68,8 @@ class SongGuess(
       endGame(); return
     }
 
+    channel.sendMessage("Round ${getRoundNumber()}").queue()
+
     // Removes any extra information from the title, which is usually in parentheses
     // or following a hyphen. Ex: Never Be Alone - MTV Unplugged -> Never Be Alone
 
@@ -102,8 +104,6 @@ class SongGuess(
       channel.sendMessage("Error continuing to the next round: ${e.message}").queue()
       nextRound(); return
     }
-
-    channel.sendMessage("Round ${getRoundNumber()}").queue()
 
     // Marks the time this round began
     clockMark = MonoClock.markNow()

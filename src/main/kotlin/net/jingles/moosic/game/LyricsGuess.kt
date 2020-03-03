@@ -162,6 +162,9 @@ class LyricsGuess(
     val tracks = getRandomPlaylistTracks(owner, rounds)
     val prompts = LinkedList<LyricPrompt>()
 
+    //TODO: Remove debug message
+    println("\n\n${tracks.toNumbered { toSimpleTrackInfo() }}\n\n")
+
     tracks.mapNotNull {
 
       val url = search(it.toSearchQuery())
