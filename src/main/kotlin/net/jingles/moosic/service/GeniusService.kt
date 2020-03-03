@@ -4,6 +4,7 @@ import org.json.JSONObject
 import org.jsoup.Jsoup
 
 private val token: String = System.getenv("genius_token")
+private val regex = Regex("(\\[.*?])")
 
 data class SearchResult(val title: String, val artist: String, val url: String)
 
@@ -34,20 +35,21 @@ fun search(query: String): List<SearchResult> {
  */
 fun getLyrics(url: String): List<Pair<String, String>> {
 
-  val lyrics = Jsoup.connect(url)
+  val text = Jsoup.connect(url)
     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0")
     .get().getElementsByClass("lyrics").first().wholeText()
 
-  val regex = Regex("(\\[.*?])")
+  val lyrics = if (text.contains(regex)) {
 
-  return if (lyrics.contains(regex)) {
-
-    val headings = regex.findAll(lyrics).map { it.value }
-    val sections = regex.split(lyrics, headings.count() + 1).drop(1)
+    val headings = regex.findAll(text).map { it.value }
+    val sections = regex.split(text, headings.count() + 1).drop(1)
     // The first element is dropped because it is always empty
 
-    headings.mapIndexed { index, heading -> Pair(heading, sections[index]) }.toList()
+    headings.mapIndexed { index, heading -> Pair(heading, sections[index]) }
+      .filter { it.second.isNotBlank() }.toList()
 
-  } else lyrics.split("\n\n").map { Pair('\u200b'.toString(), it) }
+  } else text.split("\n\n").map { Pair('\u200b'.toString(), it) }
+
+  return lyrics.filter { it.second.isNotBlank() }
 
 }

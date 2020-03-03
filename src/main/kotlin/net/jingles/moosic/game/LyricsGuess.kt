@@ -174,11 +174,10 @@ class LyricsGuess(
 
       if (url == null) null else Pair(it.toSimpleTrackInfo(), url)
 
-    }.mapNotNull {
-
-      val verse = getLyrics(it.second).filter { pair -> pair.second.isNotBlank() }
-      if (verse.isEmpty()) null else Pair(it.first, verse.random().second.split("\n"))
-
+    }.map {
+      Pair(it.first, getLyrics(it.second))
+    }.mapRandomly(1) {
+      Pair(first, second.random().second.split("\n"))
     }.mapTo(prompts) { pair ->
 
       val lines = pair.second
