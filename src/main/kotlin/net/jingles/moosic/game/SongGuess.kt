@@ -31,7 +31,7 @@ class SongGuess(
 
   // Game information
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
-  private val tracks = owner.getRandomPlaylistTracks(rounds)
+  private val tracks = getRandomPlaylistTracks(owner, rounds)
   private val currentTrack get() = tracks.peek()
   private lateinit var editedName: String
 

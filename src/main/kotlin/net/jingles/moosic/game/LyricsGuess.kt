@@ -159,7 +159,7 @@ class LyricsGuess(
 
   private fun populateLyricPrompts(owner: SpotifyClient): LinkedList<LyricPrompt> {
 
-    val tracks = owner.getRandomPlaylistTracks(rounds)
+    val tracks = getRandomPlaylistTracks(owner, rounds)
     val prompts = LinkedList<LyricPrompt>()
 
     tracks.mapNotNull {

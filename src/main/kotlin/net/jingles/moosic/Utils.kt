@@ -37,14 +37,6 @@ fun String.boldOnIndex(index: Int, bold: Int) = if (index == bold) String.format
 
 // Conversion from Spotify objects to readable Strings
 
-inline fun <T> Iterable<T>.toNumbered(offset: Int = 0, bold: Int = -1, composer: T.() -> String) =
-  mapIndexed { index, element ->
-    "${index + offset + 1}. ${composer.invoke(element).boldOnIndex(index, bold)}"
-  }.joinToString("\n")
-
-inline fun <T> Iterable<T>.toUnnumbered(crossinline composer: T.() -> String) =
-  joinToString("\n") { composer.invoke(it) }
-
 fun Iterable<SimpleArtist>.toNames() = joinToString { it.name }
 
 fun SimpleTrack.toTrackInfo() = "$name by ${artists.toNames()}"
@@ -95,28 +87,41 @@ private fun levenshtein(lhs : CharSequence, rhs : CharSequence) : Int {
 
 // Spotify stuffs
 
-fun SpotifyClient.getRandomPlaylistTracks(limit: Int): LinkedList<Track> {
+fun getRandomPlaylistTracks(client: SpotifyClient, limit: Int): LinkedList<Track> {
 
-  val populatedList = LinkedList<Track>()
+  val playlists = client.clientAPI.playlists.getClientPlaylists().complete().items
 
-  val playlists = clientAPI.playlists.getClientPlaylists().complete().items
-  val erroneousPlaylists = mutableListOf<SimplePlaylist>()
+  val populatedList = playlists.mapRandomly(limit) {
+    val full = this.toFullPlaylist().complete()
+    full?.tracks?.random()?.track
+  }
+
+  return LinkedList(populatedList)
+
+}
+
+// Collection stuffs
+
+inline fun <T> Iterable<T>.toNumbered(offset: Int = 0, bold: Int = -1, composer: T.() -> String) =
+  mapIndexed { index, element ->
+    "${index + offset + 1}. ${composer.invoke(element).boldOnIndex(index, bold)}"
+  }.joinToString("\n")
+
+inline fun <T> Iterable<T>.toUnnumbered(crossinline composer: T.() -> String) =
+  joinToString("\n") { composer.invoke(it) }
+
+inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): List<Z> {
+
+  val populatedList = mutableListOf<Z>()
 
   while (populatedList.size < limit) {
 
-    val simple = playlists.random()
-    if (erroneousPlaylists.contains(simple)) continue
-
     try {
 
-      val full = simple.toFullPlaylist().complete() ?: continue
+      val mappedValue = mapper.invoke(this.random())
+      if (mappedValue != null) populatedList.add(mappedValue)
 
-      val track = full.tracks.random().track
-      if (track != null) populatedList.add(track)
-
-    } catch (exception: Exception) {
-      erroneousPlaylists.add(simple)
-      println("Error parsing playlist: Local track files are currently unsupported.")
+    } catch (e: Exception) {
       continue
     }
 
