@@ -377,17 +377,6 @@ class PlayerCommand : Command() {
     }
 
     if (searchResult.items.isEmpty()) throw CommandException("There were no search results for that query.")
-    else if (searchResult.items.size == 1) {
-
-      val builder = EmbedBuilder()
-        .setColor(Color.WHITE)
-        .setFooter("Powered by Spotify", SPOTIFY_ICON)
-        .setTimestamp(Instant.now())
-
-      context.event.channel.sendMessage(playSelection(client, searchResult.items[0], builder)).queue()
-      return
-
-    }
 
     PaginatedSelection(PagingObjectHandler(searchResult), 6e4.toLong(), "${context.event.author.name}'s Search Results",
       composer = {
@@ -410,37 +399,16 @@ class PlayerCommand : Command() {
 
   private fun playSelection(client: SpotifyClient, selection: CoreObject, builder: EmbedBuilder): MessageEmbed {
 
-    val playerApi = client.clientAPI.player
-    var title = "Now Playing: "
-    val url: String
+    val contextInfo = selection.toContextInfo()
 
-    when (selection) {
+    playContext(client, selection)
 
-      is Track -> {
-        title += selection.toSimpleTrackInfo(); url = selection.album.images[0].url
-        playerApi.startPlayback(tracksToPlay = listOf(selection.id)).complete()
-      }
+    builder.setTitle("Now Playing: ${contextInfo.title}")
+    builder.setImage(contextInfo.imageUrl)
 
-      is Artist -> {
-        title += selection.name; url = selection.images[0].url
-        playerApi.startPlayback(artist = selection.id).complete()
-      }
-
-      is SimpleAlbum -> {
-        title += selection.name; url = selection.images[0].url
-        playerApi.startPlayback(album = selection.id).complete()
-      }
-
-      else -> with(selection as SimplePlaylist) {
-        title += toPlaylistInfo(); url = images[0].url
-        playerApi.startPlayback(playlist = uri).complete()
-      }
-
-    }
-
-    builder.setTitle(title); builder.setImage(url)
     // Get rid of anything we aren't interested in
-    builder.setDescription(null); builder.fields.clear()
+    builder.setDescription(null)
+    builder.fields.clear()
 
     return builder.build()
 

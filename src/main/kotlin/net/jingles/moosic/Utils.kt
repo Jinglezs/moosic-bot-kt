@@ -1,9 +1,6 @@
 package net.jingles.moosic
 
 import com.adamratzman.spotify.models.*
-import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.MessageChannel
 import net.jingles.moosic.service.SpotifyClient
 import java.text.NumberFormat
 import java.time.ZonedDateTime
@@ -12,12 +9,6 @@ import java.time.format.FormatStyle
 import java.util.*
 
 private const val BOLD = "**%s**"
-
-// Conversions to Discord objects
-
-fun Long.toUser(jda: JDA) = jda.getUserById(this)
-
-fun Long.toMessage(channel: MessageChannel): Message = channel.retrieveMessageById(this).complete()
 
 // Formatting for dates, numbers, and Strings
 
@@ -57,7 +48,7 @@ fun String.percentMatch(other: String): Double {
   return (largestLength - levenshteinDistance) / largestLength.toDouble()
 }
 
-private fun levenshtein(lhs : CharSequence, rhs : CharSequence) : Int {
+private fun levenshtein(lhs: CharSequence, rhs: CharSequence): Int {
   val lhsLength = lhs.length
   val rhsLength = rhs.length
 
@@ -68,7 +59,7 @@ private fun levenshtein(lhs : CharSequence, rhs : CharSequence) : Int {
     newCost[0] = i
 
     for (j in 1 until lhsLength) {
-      val match = if(lhs[j - 1] == rhs[i - 1]) 0 else 1
+      val match = if (lhs[j - 1] == rhs[i - 1]) 0 else 1
 
       val costReplace = cost[j - 1] + match
       val costInsert = cost[j] + 1
@@ -130,3 +121,28 @@ inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): Lis
   return populatedList
 
 }
+
+// Spotify interactions
+
+fun <T : CoreObject> playContext(client: SpotifyClient, context: T) {
+
+  val player = client.clientAPI.player
+
+  when (context) {
+    is Track -> player.startPlayback(tracksToPlay = listOf(context.id))
+    is Artist -> player.startPlayback(artist = context.id)
+    is SimpleAlbum -> player.startPlayback(album = context.id)
+    is SimplePlaylist -> player.startPlayback(playlist = context.uri)
+  }
+
+}
+
+fun CoreObject.toContextInfo(): ContextInfo = when (this) {
+  is Track -> ContextInfo(name, album.images.firstOrNull()?.url)
+  is Artist -> ContextInfo(name, images.firstOrNull()?.url)
+  is SimpleAlbum -> ContextInfo(name, images.firstOrNull()?.url)
+  is SimplePlaylist -> ContextInfo(name, images.firstOrNull()?.url)
+  else -> ContextInfo("You did a dumb.", null)
+}
+
+data class ContextInfo(val title: String, val imageUrl: String?)
