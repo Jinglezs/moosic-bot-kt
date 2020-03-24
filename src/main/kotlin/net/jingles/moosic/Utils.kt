@@ -129,10 +129,10 @@ fun <T : CoreObject> playContext(client: SpotifyClient, context: T) {
   val player = client.clientAPI.player
 
   when (context) {
-    is Track -> player.startPlayback(tracksToPlay = listOf(context.id))
-    is Artist -> player.startPlayback(artist = context.id)
-    is SimpleAlbum -> player.startPlayback(album = context.id)
-    is SimplePlaylist -> player.startPlayback(playlist = context.uri)
+    is Track -> player.startPlayback(tracksToPlay = listOf(context.id)).queue()
+    is Artist -> player.startPlayback(artist = context.id).queue()
+    is SimpleAlbum -> player.startPlayback(album = context.id).queue()
+    is SimplePlaylist -> player.startPlayback(playlist = context.uri).queue()
   }
 
 }
