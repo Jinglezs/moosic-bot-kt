@@ -27,7 +27,9 @@ class SongGuessCommand : Command() {
       throw CommandException("The type must either be \"title\" or \"artist\"")
 
     val rounds = min(context.arguments.pollFirst().toInt(), 20)
-    val playlistName = context.arguments.pollFirst()
+
+    val playlistName = if (context.arguments.isEmpty()) null
+    else context.arguments.pollFirst()
 
     SongGuess(context.event.channel, spotify, type, rounds, getPlaylist(spotify, playlistName))
 
@@ -48,7 +50,9 @@ class LyricGuessCommand : Command() {
       ?: throw CommandException("You must be authenticated to play Lyric Guess >:V")
 
     val rounds = min(context.arguments.pollFirst().toInt(), 20)
-    val playlistName = context.arguments.pollFirst()
+
+    val playlistName = if (context.arguments.isEmpty()) null
+    else context.arguments.pollFirst()
 
     LyricsGuess(context.event.channel, spotify, rounds, getPlaylist(spotify, playlistName))
 
@@ -56,9 +60,17 @@ class LyricGuessCommand : Command() {
 
 }
 
-private fun getPlaylist(client: SpotifyClient, name: String): Playlist? = try {
-  client.clientAPI.playlists
-    .getClientPlaylist(name).complete()?.toFullPlaylist()?.complete()
-} catch (e: Exception) {
-  null
+private fun getPlaylist(client: SpotifyClient, name: String?): Playlist? {
+
+  try {
+
+    if (name == null) return null
+
+    return client.clientAPI.playlists.getClientPlaylists().getAllItems().complete()
+      .firstOrNull { it.name.equals(name, true) }?.toFullPlaylist()?.complete()
+
+  } catch (e: Exception) {
+    return null
+  }
+
 }

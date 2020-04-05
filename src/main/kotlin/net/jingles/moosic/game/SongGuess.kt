@@ -40,6 +40,7 @@ class SongGuess(
 
   private val currentTrack get() = tracks.peek()
   private lateinit var editedName: String
+  private lateinit var strippedName: String
 
   init {
     channel.sendMessage("A game of Song Guess has been created. Send >join to play >:V").queue()
@@ -71,7 +72,7 @@ class SongGuess(
 
     // End the game when all of the tracks are gone
     if (tracks.isEmpty()) {
-      endGame(); return
+      if (!started) endGame(); return
     }
 
     channel.sendMessage("Round ${getRoundNumber()}").queue()
@@ -87,6 +88,8 @@ class SongGuess(
       else -> currentTrack.artists.toNames()
 
     }.trim()
+
+    strippedName = editedName.toLowerCase().filter { it.isLetterOrDigit() }
 
     // Spotify only accepts lists of track IDs/URIs to play
     val tracksToPlay = listOf(currentTrack.id)
@@ -123,6 +126,9 @@ class SongGuess(
   }
 
   override fun endGame() {
+
+    started = false
+    tracks.clear()
 
     val scoreboard = scores.mapValues { entry ->
       entry.value.sumBy {
@@ -186,7 +192,7 @@ class SongGuess(
   private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
 
     val strippedGuess = guess.toLowerCase().filter { it.isLetterOrDigit() }
-    val accuracy = editedName.toLowerCase().percentMatch(strippedGuess)
+    val accuracy = strippedName.percentMatch(strippedGuess)
     if (accuracy < SUCCESS_LIMIT) return null
 
     val score = Score(accuracy, clockMark.elapsedNow().inSeconds, true)

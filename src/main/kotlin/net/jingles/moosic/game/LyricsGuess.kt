@@ -68,7 +68,7 @@ class LyricsGuess(
 
     // End the game when all of the tracks are gone
     if (lyricPrompts.isEmpty()) {
-      endGame(); return
+      if (!started) endGame(); return
     }
 
     // Marks the time this round began
@@ -90,6 +90,9 @@ class LyricsGuess(
   }
 
   override fun endGame() {
+
+    started = false
+    lyricPrompts.clear()
 
     val scoreboard = scores.mapValues { entry ->
       entry.value.sumBy {
