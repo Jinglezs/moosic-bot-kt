@@ -39,10 +39,6 @@ abstract class InteractiveGame(
       true
     }
 
-    registerGameCommand(">stop") { _, _ ->
-      endGame(); true
-    }
-
     channel.jda.addEventListener(InputListener(this))
 
   }

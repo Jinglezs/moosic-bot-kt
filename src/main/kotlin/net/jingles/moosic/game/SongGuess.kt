@@ -49,6 +49,11 @@ class SongGuess(
 
   private fun getRoundNumber() = (rounds - tracks.size) + 1
 
+  override fun registerGameCommands() {
+    super.registerGameCommands()
+    registerGameCommand(">stop") { _, _ -> tracks.clear(); true }
+  }
+
   override fun start() {
     started = true
     channel.sendMessage("The game has started! You have 15 seconds to guess the __${type}__ of each song >:V").queue()
@@ -72,7 +77,7 @@ class SongGuess(
 
     // End the game when all of the tracks are gone
     if (tracks.isEmpty()) {
-      if (!started) endGame(); return
+      endGame(); return
     }
 
     channel.sendMessage("Round ${getRoundNumber()}").queue()
@@ -127,7 +132,6 @@ class SongGuess(
 
   override fun endGame() {
 
-    started = false
     tracks.clear()
 
     val scoreboard = scores.mapValues { entry ->

@@ -45,6 +45,11 @@ class LyricsGuess(
     registerGameCommands()
   }
 
+  override fun registerGameCommands() {
+    super.registerGameCommands()
+    registerGameCommand(">stop") { _, _ -> lyricPrompts.clear(); true }
+  }
+
   override fun start() {
     started = true
     channel.sendMessage("The game has started. Complete the missing line from the verse!").queue()
@@ -68,7 +73,7 @@ class LyricsGuess(
 
     // End the game when all of the tracks are gone
     if (lyricPrompts.isEmpty()) {
-      if (!started) endGame(); return
+      endGame(); return
     }
 
     // Marks the time this round began
@@ -91,7 +96,6 @@ class LyricsGuess(
 
   override fun endGame() {
 
-    started = false
     lyricPrompts.clear()
 
     val scoreboard = scores.mapValues { entry ->
