@@ -1,6 +1,7 @@
 package net.jingles.moosic.game
 
 import com.adamratzman.spotify.SpotifyException
+import com.adamratzman.spotify.models.Playlist
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -12,6 +13,7 @@ import net.jingles.moosic.*
 import net.jingles.moosic.service.SpotifyClient
 import java.awt.Color
 import java.time.Instant
+import java.util.*
 import kotlin.time.ExperimentalTime
 import kotlin.time.MonoClock
 
@@ -26,12 +28,16 @@ class SongGuess(
   channel: MessageChannel,
   owner: SpotifyClient,
   private val type: String,
-  private val rounds: Int
+  private val rounds: Int,
+  playlist: Playlist?
 ): InteractiveGame(channel, owner) {
 
   // Game information
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
-  private val tracks = getRandomPlaylistTracks(owner, rounds)
+
+  private var tracks = if (playlist == null) getRandomPlaylistTracks(owner, rounds)
+  else LinkedList(playlist.tracks.mapRandomly(rounds) { track!! })
+
   private val currentTrack get() = tracks.peek()
   private lateinit var editedName: String
 
@@ -179,7 +185,8 @@ class SongGuess(
    */
   private fun verifyGuess(player: SpotifyClient, guess: String): Score? {
 
-    val accuracy = editedName.toLowerCase().percentMatch(guess)
+    val strippedGuess = guess.toLowerCase().filter { it.isLetterOrDigit() }
+    val accuracy = editedName.toLowerCase().percentMatch(strippedGuess)
     if (accuracy < SUCCESS_LIMIT) return null
 
     val score = Score(accuracy, clockMark.elapsedNow().inSeconds, true)

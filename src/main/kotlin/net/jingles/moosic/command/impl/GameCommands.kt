@@ -1,8 +1,10 @@
 package net.jingles.moosic.command.impl
 
+import com.adamratzman.spotify.models.Playlist
 import net.jingles.moosic.command.*
 import net.jingles.moosic.game.LyricsGuess
 import net.jingles.moosic.game.SongGuess
+import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
 import kotlin.math.min
 import kotlin.time.ExperimentalTime
@@ -25,8 +27,9 @@ class SongGuessCommand : Command() {
       throw CommandException("The type must either be \"title\" or \"artist\"")
 
     val rounds = min(context.arguments.pollFirst().toInt(), 20)
+    val playlistName = context.arguments.pollFirst()
 
-    SongGuess(context.event.channel, spotify, type, rounds)
+    SongGuess(context.event.channel, spotify, type, rounds, getPlaylist(spotify, playlistName))
 
   }
 
@@ -45,9 +48,17 @@ class LyricGuessCommand : Command() {
       ?: throw CommandException("You must be authenticated to play Lyric Guess >:V")
 
     val rounds = min(context.arguments.pollFirst().toInt(), 20)
+    val playlistName = context.arguments.pollFirst()
 
-    LyricsGuess(context.event.channel, spotify, rounds)
+    LyricsGuess(context.event.channel, spotify, rounds, getPlaylist(spotify, playlistName))
 
   }
 
+}
+
+private fun getPlaylist(client: SpotifyClient, name: String): Playlist? = try {
+  client.clientAPI.playlists
+    .getClientPlaylist(name).complete()?.toFullPlaylist()?.complete()
+} catch (e: Exception) {
+  null
 }

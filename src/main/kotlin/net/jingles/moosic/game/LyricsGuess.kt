@@ -1,5 +1,6 @@
 package net.jingles.moosic.game
 
+import com.adamratzman.spotify.models.Playlist
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -26,7 +27,8 @@ private val WHITESPACE = Regex("[\\p{Zs}]+")
 class LyricsGuess(
   channel: MessageChannel,
   owner: SpotifyClient,
-  private val rounds: Int
+  private val rounds: Int,
+  private val playlist: Playlist?
 ) : InteractiveGame(channel, owner) {
 
   private val lyricPrompts = populateLyricPrompts(owner)
@@ -163,7 +165,8 @@ class LyricsGuess(
 
     while (prompts.size < rounds) {
 
-      val track = getRandomPlaylistTracks(client, 1).first()
+      val track = if (playlist == null) getRandomPlaylistTracks(client, 1).first()
+      else playlist.tracks.random().track!!
 
       val url = search(track.toSearchQuery()).firstOrNull() {
         track.artists.any { artist -> artist.name.equals(it.artist, true) }
@@ -185,10 +188,6 @@ class LyricsGuess(
         answer.toLowerCase().filter { c -> c.isLetterOrDigit() }))
 
     }
-
-    //TODO: Remove debug message
-    val debug = prompts.toNumbered { info }
-    println("\n\n$debug\n\n")
 
     return prompts
 
