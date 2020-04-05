@@ -29,7 +29,7 @@ class SongGuessCommand : Command() {
     val rounds = min(context.arguments.pollFirst().toInt(), 20)
 
     val playlistName = if (context.arguments.isEmpty()) null
-    else context.arguments.pollFirst()
+    else context.arguments.joinToString(" ")
 
     SongGuess(context.event.channel, spotify, type, rounds, getPlaylist(spotify, playlistName))
 
@@ -52,7 +52,7 @@ class LyricGuessCommand : Command() {
     val rounds = min(context.arguments.pollFirst().toInt(), 20)
 
     val playlistName = if (context.arguments.isEmpty()) null
-    else context.arguments.pollFirst()
+    else context.arguments.joinToString(" ")
 
     LyricsGuess(context.event.channel, spotify, rounds, getPlaylist(spotify, playlistName))
 
