@@ -132,6 +132,7 @@ class SongGuess(
 
   override fun endGame() {
 
+    super.endGame()
     tracks.clear()
 
     val scoreboard = scores.mapValues { entry ->

@@ -96,6 +96,7 @@ class LyricsGuess(
 
   override fun endGame() {
 
+    super.endGame()
     lyricPrompts.clear()
 
     val scoreboard = scores.mapValues { entry ->
@@ -117,7 +118,6 @@ class LyricsGuess(
       .build()
 
     channel.sendMessage(embed).queue()
-    channel.jda.removeEventListener(this)
 
   }
 

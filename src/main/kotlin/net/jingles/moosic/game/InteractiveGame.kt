@@ -18,12 +18,11 @@ abstract class InteractiveGame(
   // State variables
   protected var started = false
   protected lateinit var clockMark: ClockMark
+  private lateinit var listener: InputListener
 
   // Game information
   protected val players = mutableSetOf<SpotifyClient>()
   private val commands = mutableSetOf<GameCommand>()
-
-  // Game commands
 
   init {
     players.add(owner)
@@ -39,13 +38,16 @@ abstract class InteractiveGame(
       true
     }
 
-    channel.jda.addEventListener(InputListener(this))
+    listener = InputListener(this)
+    channel.jda.addEventListener(listener)
 
   }
 
   abstract fun start();
 
-  abstract fun endGame();
+  open fun endGame() {
+    channel.jda.removeEventListener(listener)
+  }
 
   abstract fun onPlayerInput(event: MessageReceivedEvent, client: SpotifyClient);
 
