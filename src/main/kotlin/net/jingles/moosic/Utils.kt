@@ -109,12 +109,16 @@ fun getRandomPlaylistTracks(
   val playlists = client.clientAPI.playlists.getClientPlaylists().complete().items
   val fullPlaylists = mutableMapOf<SimplePlaylist, Playlist>()
 
+  println("User playlist count: ${playlists.size}")
+
   val populatedList = playlists.mapRandomly(limit) {
 
     val full = fullPlaylists.computeIfAbsent(this) { this.toFullPlaylist().complete()!! }
     val track = full.tracks.random()
 
-    if (track?.track?.type.equals("track") || track?.isLocal!!) null
+    println("Found random track: ${track?.track?.toSimpleTrackInfo()}")
+
+    if ("track" == track?.track?.type || track?.isLocal!!) null
     else track.track
 
   }
