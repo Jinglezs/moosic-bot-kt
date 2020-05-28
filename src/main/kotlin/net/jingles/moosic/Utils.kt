@@ -102,14 +102,11 @@ fun getRandomPlaylistTracks(
 ): LinkedList<Playable> {
 
   if (playlist != null) return LinkedList(playlist.tracks
-    .filter { "track" == it?.track?.type }
-    .filter { it!!.isLocal == null || (allowLocal && it.isLocal!!) }
+    .filterNot { !allowLocal && it?.isLocal == true }
     .mapRandomly(limit) { this!!.track })
 
   val playlists = client.clientAPI.playlists.getClientPlaylists().complete().items
   val fullPlaylists = mutableMapOf<SimplePlaylist, Playlist>()
-
-  println("User playlist count: ${playlists.size}")
 
   val populatedList = playlists.mapRandomly(limit) {
 
@@ -118,8 +115,8 @@ fun getRandomPlaylistTracks(
 
     println("Found random track: ${track?.track?.toSimpleTrackInfo()}")
 
-    if ("track" == track?.track?.type || track?.isLocal!!) null
-    else track.track
+    if (!allowLocal && track?.isLocal == true) null
+    else track?.track
 
   }
 
@@ -146,7 +143,6 @@ inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): Lis
 
   while (populatedList.size < limit) {
 
-    println("Randomly mapping! Attempt $attempt")
     attempt++
 
     val mappedValue = mapper.invoke(this.random())
