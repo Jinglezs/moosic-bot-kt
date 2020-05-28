@@ -95,14 +95,14 @@ private fun levenshtein(lhs: CharSequence, rhs: CharSequence): Int {
 
 // Spotify stuffs
 
-fun getRandomPlaylistTracks(client: SpotifyClient, limit: Int): LinkedList<Track> {
+fun getRandomPlaylistTracks(client: SpotifyClient, limit: Int, allowLocal: Boolean): LinkedList<Playable> {
 
   val playlists = client.clientAPI.playlists.getClientPlaylists().complete().items
 
   val populatedList = playlists.mapRandomly(limit) {
     val full = this.toFullPlaylist().complete()
     full?.tracks?.random()?.track
-  }.filterIsInstance(Track::class.java)
+  }.filter { it is Track || (allowLocal && it is LocalTrack) }
 
   return LinkedList(populatedList)
 

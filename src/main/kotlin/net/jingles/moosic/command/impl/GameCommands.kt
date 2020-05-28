@@ -10,7 +10,7 @@ import kotlin.math.min
 import kotlin.time.ExperimentalTime
 
 @CommandMeta(
-  category = Category.GAMES, triggers = ["song-guess"], minArgs = 2, args = "<artist/track> <rounds>",
+  category = Category.GAMES, triggers = ["song-guess"], minArgs = 2, args = "<artist/track> <rounds> <playlist>",
   description = "Creates a Song Guess game, where the players must guess the title/artist of the song being played."
 )
 class SongGuessCommand : Command() {
@@ -38,7 +38,7 @@ class SongGuessCommand : Command() {
 }
 
 @CommandMeta(
-  category = Category.GAMES, triggers = ["lyric-guess"], minArgs = 1, args = "<rounds>",
+  category = Category.GAMES, triggers = ["lyric-guess"], minArgs = 1, args = "<rounds> <playlist>",
   description = "Creates a Lyric Guess game, where the players must fill in the missing line of a verse."
 )
 class LyricGuessCommand : Command() {

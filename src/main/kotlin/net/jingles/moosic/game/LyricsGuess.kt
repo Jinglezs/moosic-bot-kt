@@ -1,6 +1,8 @@
 package net.jingles.moosic.game
 
+import com.adamratzman.spotify.models.LocalTrack
 import com.adamratzman.spotify.models.Playlist
+import com.adamratzman.spotify.models.Track
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -170,10 +172,17 @@ class LyricsGuess(
 
     val prompts = LinkedList<LyricPrompt>()
 
+    val tracks = if (playlist == null) getRandomPlaylistTracks(client, rounds, true)
+    else LinkedList(playlist.tracks.toList()
+      .filterNotNull()
+      .map { it.track }
+      .filter { it is Track  || it is LocalTrack }
+      .mapRandomly(rounds) { this }
+    )
+
     while (prompts.size < rounds) {
 
-      val trackInfo = if (playlist == null) getRandomPlaylistTracks(client, 1).first().toSimpleTrackInfo()
-      else playlist.tracks.items.random().track!!.toSimpleTrackInfo()
+      val trackInfo = tracks.random().toSimpleTrackInfo()
 
       val title = trackInfo.substringBefore(" ")
       val artists = trackInfo.substringAfter(" ").split(", ")
