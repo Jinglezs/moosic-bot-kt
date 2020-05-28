@@ -32,9 +32,26 @@ fun Iterable<SimpleArtist>.toNames() = joinToString { it.name }
 
 fun SimpleTrack.toTrackInfo() = "$name by ${artists.toNames()}"
 
-fun Track.toSimpleTrackInfo() = "$name by ${artists.toNames()}"
+fun Playable.toSimpleTrackInfo() = when (this) {
+  is Track -> "$name by ${artists.toNames()}"
+  is LocalTrack -> "$name by ${artists.joinToString(", ") { it.name }}"
+  is Episode -> "$name on ${show.name}"
+  else -> "Some mystical, inaccessible playable object."
+}
 
-fun Track.toSearchQuery() = "${name.substringBeforeLast("-")} ${artists.first().name}"
+fun Playable.toSearchQuery() = when (this) {
+  is Track -> "${name.substringBeforeLast("-")} ${artists.first().name}"
+  is LocalTrack -> "${name.substringBeforeLast("-")} ${artists.first().name}"
+  is Episode -> "$name ${show.name}"
+  else -> "I really hope this isn't the title of some obscure song or podcast."
+}
+
+fun Playable.toInfo() = when (this) {
+  is Track -> "$name by ${artists.toNames()}"
+  is LocalTrack -> "$name by ${artists.joinToString { it.name }}"
+  is Episode -> "$name on ${show.name}"
+  else -> "This should never be the result lul"
+}
 
 fun SimpleAlbum.toAlbumInfo() = "$name by ${artists.toNames()}"
 
@@ -85,7 +102,7 @@ fun getRandomPlaylistTracks(client: SpotifyClient, limit: Int): LinkedList<Track
   val populatedList = playlists.mapRandomly(limit) {
     val full = this.toFullPlaylist().complete()
     full?.tracks?.random()?.track
-  }
+  }.filterIsInstance(Track::class.java)
 
   return LinkedList(populatedList)
 
@@ -124,15 +141,20 @@ inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): Lis
 
 // Spotify interactions
 
-fun <T : CoreObject> playContext(client: SpotifyClient, context: T) {
+suspend fun <T : CoreObject> playContext(client: SpotifyClient, context: T) {
 
   val player = client.clientAPI.player
 
   when (context) {
-    is Track -> player.startPlayback(tracksToPlay = listOf(context.id)).queue()
-    is Artist -> player.startPlayback(artist = context.id).queue()
-    is SimpleAlbum -> player.startPlayback(album = context.id).queue()
-    is SimplePlaylist -> player.startPlayback(playlist = context.uri).queue()
+    is Track -> player.startPlayback(tracksToPlay = listOf(context.uri)).queue()
+    is SimpleAlbum -> player.startPlayback(collection = context.uri).queue()
+    is SimplePlaylist -> player.startPlayback(collection = context.uri).queue()
+    is Artist -> player.startPlayback(tracksToPlay = context.api.artists.getArtistAlbums(context.uri.uri).complete()
+      .getAllItemsNotNull().complete()
+      .mapNotNull { it.toFullAlbum().complete() }
+      .mapNotNull { it.tracks }.flatten()
+      .mapNotNull { it?.uri }.toList()
+    ).queue()
   }
 
 }

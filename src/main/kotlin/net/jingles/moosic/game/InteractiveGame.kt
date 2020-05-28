@@ -6,8 +6,8 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.SubscribeEvent
 import net.jingles.moosic.service.SpotifyClient
 import net.jingles.moosic.service.getSpotifyClient
-import kotlin.time.ClockMark
 import kotlin.time.ExperimentalTime
+import kotlin.time.TimeMark
 
 @ExperimentalTime
 abstract class InteractiveGame(
@@ -17,7 +17,7 @@ abstract class InteractiveGame(
 
   // State variables
   protected var started = false
-  protected lateinit var clockMark: ClockMark
+  protected lateinit var clockMark: TimeMark
   private lateinit var listener: InputListener
 
   // Game information
@@ -43,13 +43,13 @@ abstract class InteractiveGame(
 
   }
 
-  abstract fun start();
+  abstract fun start()
 
   open fun endGame() {
     channel.jda.removeEventListener(listener)
   }
 
-  abstract fun onPlayerInput(event: MessageReceivedEvent, client: SpotifyClient);
+  abstract fun onPlayerInput(event: MessageReceivedEvent, client: SpotifyClient)
 
   fun registerGameCommand(trigger: String, executor: (MessageReceivedEvent, SpotifyClient) -> Boolean) =
     commands.add(GameCommand(trigger, executor))

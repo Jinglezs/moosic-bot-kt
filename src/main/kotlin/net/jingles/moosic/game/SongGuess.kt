@@ -2,6 +2,7 @@ package net.jingles.moosic.game
 
 import com.adamratzman.spotify.SpotifyException
 import com.adamratzman.spotify.models.Playlist
+import com.adamratzman.spotify.models.Track
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -15,7 +16,7 @@ import java.awt.Color
 import java.time.Instant
 import java.util.*
 import kotlin.time.ExperimentalTime
-import kotlin.time.MonoClock
+import kotlin.time.TimeSource
 
 /**
  * The proportion of a player's guess that must match the song
@@ -30,13 +31,18 @@ class SongGuess(
   private val type: String,
   private val rounds: Int,
   playlist: Playlist?
-): InteractiveGame(channel, owner) {
+) : InteractiveGame(channel, owner) {
 
   // Game information
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
 
   private var tracks = if (playlist == null) getRandomPlaylistTracks(owner, rounds)
-  else LinkedList(playlist.tracks.mapRandomly(rounds) { track!! })
+  else LinkedList(playlist.tracks.toList()
+    .filterNotNull()
+    .filterNot { it.isLocal != null && it.isLocal!! }
+    .filterIsInstance(Track::class.java)
+    .mapRandomly(rounds) { this }
+  )
 
   private val currentTrack get() = tracks.peek()
   private lateinit var editedName: String
@@ -97,7 +103,7 @@ class SongGuess(
     strippedName = editedName.toLowerCase().filter { it.isLetterOrDigit() }
 
     // Spotify only accepts lists of track IDs/URIs to play
-    val tracksToPlay = listOf(currentTrack.id)
+    val tracksToPlay = listOf(currentTrack.uri)
 
     // Determines a random position in the track to begin playing at
     val maxDuration = (currentTrack.durationMs * 0.80).toInt()
@@ -120,7 +126,7 @@ class SongGuess(
     }
 
     // Marks the time this round began
-    clockMark = MonoClock.markNow()
+    clockMark = TimeSource.Monotonic.markNow()
 
     // Start the next round after 10 seconds
     GlobalScope.launch {
@@ -136,13 +142,13 @@ class SongGuess(
     tracks.clear()
 
     val scoreboard = scores.mapValues { entry ->
-      entry.value.sumBy {
-        var points = if (it.guessed) 100 else 0 // 100 points for guessing
-        points += (15 - it.time).toInt() * 10   // 10 points per second before 15 seconds
-        points *= (1 + it.accuracy).toInt()     // Increase by the accuracy of the guess
-        points
-      }
-    }.map { Pair(channel.jda.getUserById(it.key.discordId)?.name, it.value) }
+        entry.value.sumBy {
+          var points = if (it.guessed) 100 else 0 // 100 points for guessing
+          points += (15 - it.time).toInt() * 10   // 10 points per second before 15 seconds
+          points *= (1 + it.accuracy).toInt()     // Increase by the accuracy of the guess
+          points
+        }
+      }.map { Pair(channel.jda.getUserById(it.key.discordId)?.name, it.value) }
       .sortedByDescending { it.second }.toNumbered { "$first: $second" }
 
     // Average the score times and select the entry with the smallest value

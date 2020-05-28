@@ -61,16 +61,9 @@ class LyricGuessCommand : Command() {
 }
 
 private fun getPlaylist(client: SpotifyClient, name: String?): Playlist? {
+  if (name == null) return null
 
-  try {
-
-    if (name == null) return null
-
-    return client.clientAPI.playlists.getClientPlaylists().getAllItems().complete()
-      .firstOrNull { it.name.equals(name, true) }?.toFullPlaylist()?.complete()
-
-  } catch (e: Exception) {
-    return null
-  }
-
+  return client.clientAPI.playlists.getClientPlaylists().getAllItems().complete()
+    .filterNotNull()
+    .firstOrNull { it.name.equals(name, true) }?.toFullPlaylist()?.complete()
 }

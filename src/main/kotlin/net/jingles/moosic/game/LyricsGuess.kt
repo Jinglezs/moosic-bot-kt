@@ -16,7 +16,7 @@ import java.awt.Color
 import java.time.Instant
 import java.util.*
 import kotlin.time.ExperimentalTime
-import kotlin.time.MonoClock
+import kotlin.time.TimeSource.Monotonic
 
 private const val SUCCESS_LIMIT = 0.5
 
@@ -77,7 +77,7 @@ class LyricsGuess(
     }
 
     // Marks the time this round began
-    clockMark = MonoClock.markNow()
+    clockMark = Monotonic.markNow()
 
     with(currentPrompt) {
       builder.setTitle("Round ${getRoundNumber()} - $info")
@@ -172,12 +172,15 @@ class LyricsGuess(
 
     while (prompts.size < rounds) {
 
-      val track = if (playlist == null) getRandomPlaylistTracks(client, 1).first()
-      else playlist.tracks.random().track!!
+      val trackInfo = if (playlist == null) getRandomPlaylistTracks(client, 1).first().toSimpleTrackInfo()
+      else playlist.tracks.items.random().track!!.toSimpleTrackInfo()
 
-      val url = search(track.toSearchQuery()).firstOrNull() {
-        track.artists.any { artist -> artist.name.equals(it.artist, true) }
-          && track.name.equals(it.title, true)
+      val title = trackInfo.substringBefore(" ")
+      val artists = trackInfo.substringAfter(" ").split(", ")
+
+      val url = search("$title ${artists.getOrElse(0){""}}").firstOrNull {
+        artists.any { name -> name.equals(it.artist, true) }
+          && title.equals(it.title, true)
       }?.url ?: continue
 
       val verse = getLyrics(url).random().second.split("\n")
@@ -191,7 +194,7 @@ class LyricsGuess(
         .replace(WHITESPACE, " ")
         .replace(answer, blanks).trim()}```"
 
-      prompts.add(LyricPrompt(track.toSimpleTrackInfo(), msg, answer,
+      prompts.add(LyricPrompt(trackInfo, msg, answer,
         answer.toLowerCase().filter { c -> c.isLetterOrDigit() }))
 
     }

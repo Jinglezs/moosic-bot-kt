@@ -4,6 +4,7 @@ import com.adamratzman.spotify.SpotifyClientApiBuilder
 import com.adamratzman.spotify.endpoints.client.ClientPersonalizationApi
 import com.adamratzman.spotify.endpoints.client.ClientPlayerApi
 import com.adamratzman.spotify.models.*
+import kotlinx.coroutines.runBlocking
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -225,9 +226,10 @@ class StalkCommand : Command() {
       .mapNotNull { getSpotifyClient(it.idLong)?.clientAPI }.firstOrNull()
       ?: throw CommandException("An authenticated user by that name could not be found >:V")
 
-    val pagingObject = spotify.player.getRecentlyPlayed(limit = 10).complete()
+    val pagingObject = spotify.player.getRecentlyPlayed(limit = 10).complete().getAll()
+      .complete().flatten().filterNotNull().toList()
 
-    PaginatedMessage(PagingObjectHandler(pagingObject), 9e5.toLong(), "$name's Play History") {
+    PaginatedMessage(ListHandler(pagingObject), 9e5.toLong(), "$name's Play History") {
 
       builder.fields.clear() // Clear the fields from the previous page
 
@@ -392,12 +394,15 @@ class PlayerCommand : Command() {
 
         builder.setDescription(description)
 
-      }, afterSelection = { selection -> playSelection(client, selection, builder) })
-      .create(context.event.channel)
+      }, afterSelection = { selection ->
+        runBlocking {
+          playSelection(client, selection, builder)
+        }
+      }).create(context.event.channel)
 
   }
 
-  private fun playSelection(client: SpotifyClient, selection: CoreObject, builder: EmbedBuilder): MessageEmbed {
+  private suspend fun playSelection(client: SpotifyClient, selection: CoreObject, builder: EmbedBuilder): MessageEmbed {
 
     val contextInfo = selection.toContextInfo()
 

@@ -1,8 +1,8 @@
 package net.jingles.moosic.reaction
 
 import com.adamratzman.spotify.SpotifyException
-import com.adamratzman.spotify.models.AbstractPagingObject
 import com.adamratzman.spotify.models.CursorBasedPagingObject
+import com.adamratzman.spotify.models.PagingObjectBase
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -117,9 +117,9 @@ open class PaginatedMessage<T : Any>(
 
     with(super.create(channel)) {
 
-      if (handler?.list !is CursorBasedPagingObject) addReaction(SYMBOLS["left"]!!).queue()
-      addReaction(SYMBOLS["stop"]!!).queue()
-      addReaction(SYMBOLS["right"]!!).queue()
+      if (handler?.list !is CursorBasedPagingObject<*>) addReaction(SYMBOLS.getValue("left")).queue()
+      addReaction(SYMBOLS.getValue("stop")).queue()
+      addReaction(SYMBOLS.getValue("right")).queue()
 
       return this
 
@@ -228,7 +228,7 @@ class PaginatedSelection<T : Any>(
 
     GlobalScope.launch {
 
-      val embed = when(direction) {
+      val embed = when (direction) {
         -1, 1 -> render(direction)
         else -> {
 
@@ -261,7 +261,7 @@ class ImageSlideshow(private val builder: EmbedBuilder, private val images: List
 
     builder.setImage(images[0])
 
-    with (channel.sendMessage(builder.build()).complete()) {
+    with(channel.sendMessage(builder.build()).complete()) {
       messageId = idLong
       addReaction(SYMBOLS["left"]!!).queue()
       addReaction(SYMBOLS["right"]!!).queue()
@@ -319,7 +319,8 @@ class ReactionVote<T : Any>(
   fun onReactionAdd(event: MessageReactionAddEvent) {
 
     if (event.messageIdLong != messageId || voters.contains(event.userIdLong)
-      || event.user?.isBot == true) return
+      || event.user?.isBot == true
+    ) return
 
     voters.add(event.userIdLong)
 
@@ -371,8 +372,8 @@ private fun handleReactionEvent(event: MessageReactionAddEvent): Int {
 
 }
 
-open class ListHandler<T: Any>(
-  internal var list: List<T>,
+open class ListHandler<T : Any>(
+  internal var list: List<T?>,
   protected val limit: Int = 5
 ) {
 
@@ -384,7 +385,7 @@ open class ListHandler<T: Any>(
     // End index is the offset plus the max elements per "page"
     val endIndex = (offset + limit).coerceAtMost(list.size)
     // Return the items in between the two indexes
-    return list.subList(offset, endIndex)
+    return list.subList(offset, endIndex).filterNotNull()
 
   }
 
@@ -394,49 +395,38 @@ open class ListHandler<T: Any>(
     // End index is the offset plus elements per "page," max value of the list size
     val endIndex = (offset + limit).coerceAtMost(list.size)
     // Return the items in between the two indexes
-    return list.subList(offset, endIndex)
+    return list.subList(offset, endIndex).filterNotNull()
   }
 
-  open fun getCurrent(): List<T> = list.subList(offset, (offset + limit).coerceAtMost(list.size))
+  open fun getCurrent(): List<T> = list.subList(offset, (offset + limit)
+    .coerceAtMost(list.size)).filterNotNull()
 
 }
 
-class PagingObjectHandler<T: Any>(list: AbstractPagingObject<T>) : ListHandler<T>(list, list.limit) {
+class PagingObjectHandler<T : Any>(list: PagingObjectBase<T>) : ListHandler<T>(list, list.limit) {
 
-  override suspend fun getPrevious(): List<T> {
-
-    with (list as AbstractPagingObject<T>) {
-
-      list = try {
-        getPrevious() ?: list
-      } catch (e: SpotifyException) {
-        println("${javaClass.simpleName}: Unable to parse the previous paging object.")
-        list
-      }
-
-      super.offset = offset
-      return items
-
+  override suspend fun getPrevious(): List<T> = with(list as PagingObjectBase<T>) {
+    list = try {
+      getPrevious() ?: list
+    } catch (e: SpotifyException) {
+      println("${javaClass.simpleName}: Unable to parse the previous paging object.")
+      list
     }
 
+    super.offset = offset
+    return items.filterNotNull()
   }
 
-  override suspend fun getNext(): List<T> {
-
-    with (list as AbstractPagingObject<T>) {
-
-      list = try {
-        getNext() ?: list
-      } catch (e: SpotifyException) {
-        println("${javaClass.simpleName}: Unable to parse the next paging object.")
-        list
-      }
-
-      super.offset = offset
-      return items
-
+  override suspend fun getNext(): List<T> = with(list as PagingObjectBase<T>) {
+    list = try {
+      getNext() ?: list
+    } catch (e: SpotifyException) {
+      println("${javaClass.simpleName}: Unable to parse the next paging object.")
+      list
     }
 
+    super.offset = offset
+    return items.filterNotNull()
   }
 
 }
