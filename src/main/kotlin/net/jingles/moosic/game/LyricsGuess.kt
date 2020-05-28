@@ -173,14 +173,10 @@ class LyricsGuess(
     return LinkedList(tracks.mapRandomly(rounds) {
 
       val track = tracks.random()
-      val trackInfo = track.toSimpleTrackInfo()
-
-      val title = trackInfo.substringBefore(" ")
-      val artists = trackInfo.substringAfter(" ").split(", ")
 
       val url = search(track.toSearchQuery()).firstOrNull {
-        artists.any { name -> name.equals(it.artist, true) }
-          && title.equals(it.title, true)
+        track.toArtistNames().any { name -> name.equals(it.artist, true) }
+          && track.toTitle().equals(it.title, true)
       }?.url ?: return@mapRandomly null
 
       val verse = getLyrics(url).random().second.split("\n")
@@ -194,7 +190,7 @@ class LyricsGuess(
         .replace(WHITESPACE, " ")
         .replace(answer, blanks).trim()}```"
 
-      return@mapRandomly LyricPrompt(trackInfo, msg, answer,
+      return@mapRandomly LyricPrompt(track.toSimpleTrackInfo(), msg, answer,
         answer.toLowerCase().filter { c -> c.isLetterOrDigit() })
 
     })

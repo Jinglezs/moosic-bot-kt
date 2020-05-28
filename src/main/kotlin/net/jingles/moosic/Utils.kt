@@ -29,6 +29,20 @@ fun String.boldOnIndex(index: Int, bold: Int) = if (index == bold) String.format
 
 // Conversion from Spotify objects to readable Strings
 
+fun Playable.toArtistNames() = when (this) {
+  is Track -> artists.map { it.name }
+  is LocalTrack -> artists.map { it.name }
+  is Episode -> listOf(show.publisher)
+  else -> emptyList()
+}
+
+fun Playable.toTitle() = when (this) {
+  is Track -> name
+  is LocalTrack -> name
+  is Episode -> name
+  else -> ""
+}
+
 fun Iterable<SimpleArtist>.toNames() = joinToString { it.name }
 
 fun SimpleTrack.toTrackInfo() = "$name by ${artists.toNames()}"
@@ -112,8 +126,6 @@ fun getRandomPlaylistTracks(
 
     val full = fullPlaylists.computeIfAbsent(this) { this.toFullPlaylist().complete()!! }
     val track = full.tracks.random()
-
-    println("Found random track: ${track?.track?.toSimpleTrackInfo()}")
 
     if (!allowLocal && track?.isLocal == true) null
     else track?.track
