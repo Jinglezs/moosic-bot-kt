@@ -112,7 +112,8 @@ private fun levenshtein(lhs: CharSequence, rhs: CharSequence): Int {
 
 fun getRandomPlaylistTracks(
   client: SpotifyClient, limit: Int,
-  playlist: Playlist? = null, allowLocal: Boolean = false
+  playlist: Playlist? = null,
+  allowLocal: Boolean = false
 ): LinkedList<Playable> {
 
   if (playlist != null) return LinkedList(playlist.tracks
@@ -146,19 +147,23 @@ inline fun <T> Iterable<T>.toNumbered(offset: Int = 0, bold: Int = -1, composer:
 inline fun <T> Iterable<T>.toUnnumbered(crossinline composer: T.() -> String) =
   joinToString("\n") { composer.invoke(it) }
 
-inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): List<Z> {
+inline fun <T, Z> Collection<T>.mapRandomly(
+  limit: Int,
+  allowDuplicates: Boolean = size < limit,
+  mapper: T.() -> Z?
+): Collection<Z> {
 
   if (this.isEmpty()) throw IllegalArgumentException("Cannot randomly map an empty collection!")
 
-  val populatedList = mutableListOf<Z>()
+  val populatedCollection: MutableCollection<Z> = if (allowDuplicates) mutableListOf() else mutableSetOf()
   var attempt = 1
 
-  while (populatedList.size < limit) {
+  while (populatedCollection.size < limit) {
 
     attempt++
 
     val mappedValue = mapper.invoke(this.random())
-    if (mappedValue != null) populatedList.add(mappedValue)
+    if (mappedValue != null) populatedCollection.add(mappedValue)
 
     if (attempt > limit * 2) {
       throw CommandException("Unable to randomly map within a reasonable amount of attempts.")
@@ -166,7 +171,7 @@ inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): Lis
 
   }
 
-  return populatedList
+  return populatedCollection
 
 }
 
