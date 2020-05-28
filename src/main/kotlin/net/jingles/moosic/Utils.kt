@@ -137,8 +137,12 @@ inline fun <T> Iterable<T>.toUnnumbered(crossinline composer: T.() -> String) =
 inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): List<Z> {
 
   val populatedList = mutableListOf<Z>()
+  var attempt = 1
 
   while (populatedList.size < limit) {
+
+    println("Randomly mapping! Attempt $attempt")
+    attempt++
 
     try {
 
