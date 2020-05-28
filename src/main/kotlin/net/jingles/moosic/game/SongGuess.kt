@@ -36,17 +36,8 @@ class SongGuess(
   // Game information
   private val scores = mutableMapOf<SpotifyClient, MutableList<Score>>()
 
-  private var tracks = if (playlist == null) {
-
-    getRandomPlaylistTracks(owner, rounds, false)
-      .mapTo(LinkedList()) { it as Track }
-
-  } else LinkedList(playlist.tracks.toList()
-    .filterNotNull()
-    .filterNot { it.isLocal != null && it.isLocal!! }
-    .filterIsInstance(Track::class.java)
-    .mapRandomly(rounds) { this }
-  )
+  private var tracks = getRandomPlaylistTracks(owner, rounds, playlist, false)
+    .mapTo(LinkedList()) { it as Track }
 
   private val currentTrack get() = tracks.peek()
   private lateinit var editedName: String

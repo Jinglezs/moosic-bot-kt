@@ -1,8 +1,6 @@
 package net.jingles.moosic.game
 
-import com.adamratzman.spotify.models.LocalTrack
 import com.adamratzman.spotify.models.Playlist
-import com.adamratzman.spotify.models.Track
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -102,13 +100,13 @@ class LyricsGuess(
     lyricPrompts.clear()
 
     val scoreboard = scores.mapValues { entry ->
-      entry.value.sumBy {
-        var points = if (it.guessed) 100 else 0 // 100 points for guessing
-        points += (20 - it.time).toInt() * 10   // 10 points per second before 15 seconds
-        points *= (1 + it.accuracy).toInt()     // Increase by the accuracy of the guess
-        points
-      }
-    }.map { Pair(channel.jda.getUserById(it.key.discordId)?.name, it.value) }
+        entry.value.sumBy {
+          var points = if (it.guessed) 100 else 0 // 100 points for guessing
+          points += (20 - it.time).toInt() * 10   // 10 points per second before 15 seconds
+          points *= (1 + it.accuracy).toInt()     // Increase by the accuracy of the guess
+          points
+        }
+      }.map { Pair(channel.jda.getUserById(it.key.discordId)?.name, it.value) }
       .sortedByDescending { it.second }.toNumbered { "$first: $second" }
 
     // Send an embedded message containing the results of the game
@@ -170,13 +168,7 @@ class LyricsGuess(
 
   private fun populateLyricPrompts(client: SpotifyClient): LinkedList<LyricPrompt> {
 
-    val tracks = if (playlist == null) getRandomPlaylistTracks(client, rounds, true)
-    else LinkedList(playlist.tracks.toList()
-      .filterNotNull()
-      .map { it.track }
-      .filter { it is Track  || it is LocalTrack }
-      .mapRandomly(rounds) { this }
-    )
+    val tracks = getRandomPlaylistTracks(client, rounds, playlist, true)
 
     return LinkedList(tracks.mapRandomly(rounds) {
 
