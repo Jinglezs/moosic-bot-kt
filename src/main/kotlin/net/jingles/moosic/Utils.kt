@@ -100,11 +100,10 @@ fun getRandomPlaylistTracks(
   playlist: Playlist? = null, allowLocal: Boolean = false
 ): LinkedList<Playable> {
 
-  if (playlist != null) return LinkedList(playlist.tracks.toList()
-    .filterNotNull()
-    .filter { it.track?.type.equals("track") }
-    .filter { it.isLocal == null || (allowLocal && it.isLocal!!) }
-    .mapRandomly(limit) { track })
+  if (playlist != null) return LinkedList(playlist.tracks
+    .filter { "track" == it?.track?.type }
+    .filter { it!!.isLocal == null || (allowLocal && it.isLocal!!) }
+    .mapRandomly(limit) { this!!.track })
 
   val playlists = client.clientAPI.playlists.getClientPlaylists().complete().items
   val fullPlaylists = mutableMapOf<SimplePlaylist, Playlist>()
@@ -135,6 +134,8 @@ inline fun <T> Iterable<T>.toUnnumbered(crossinline composer: T.() -> String) =
 
 inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): List<Z> {
 
+  if (this.isEmpty()) throw IllegalArgumentException("Cannot randomly map an empty collection!")
+
   val populatedList = mutableListOf<Z>()
   var attempt = 1
 
@@ -143,14 +144,8 @@ inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): Lis
     println("Randomly mapping! Attempt $attempt")
     attempt++
 
-    try {
-
-      val mappedValue = mapper.invoke(this.random())
-      if (mappedValue != null) populatedList.add(mappedValue)
-
-    } catch (e: Exception) {
-      continue
-    }
+    val mappedValue = mapper.invoke(this.random())
+    if (mappedValue != null) populatedList.add(mappedValue)
 
   }
 
