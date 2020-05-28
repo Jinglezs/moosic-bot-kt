@@ -102,10 +102,9 @@ fun getRandomPlaylistTracks(
 
   if (playlist != null) return LinkedList(playlist.tracks.toList()
     .filterNotNull()
-    .mapRandomly(limit) {
-      if (track is Track || (allowLocal && track is LocalTrack)) track
-      else null
-    })
+    .filter { it.track?.type.equals("track") }
+    .filter { it.isLocal == null || (allowLocal && it.isLocal!!) }
+    .mapRandomly(limit) { track })
 
   val playlists = client.clientAPI.playlists.getClientPlaylists().complete().items
   val fullPlaylists = mutableMapOf<SimplePlaylist, Playlist>()
@@ -113,10 +112,10 @@ fun getRandomPlaylistTracks(
   val populatedList = playlists.mapRandomly(limit) {
 
     val full = fullPlaylists.computeIfAbsent(this) { this.toFullPlaylist().complete()!! }
-    val track = full.tracks.random()?.track
+    val track = full.tracks.random()
 
-    if (track is Track || (allowLocal && track is LocalTrack)) track
-    else null
+    if (track?.track?.type.equals("track") || track?.isLocal!!) null
+    else track.track
 
   }
 
