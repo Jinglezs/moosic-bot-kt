@@ -41,7 +41,7 @@ fun Playable.toSimpleTrackInfo() = when (this) {
 
 fun Playable.toSearchQuery() = when (this) {
   is Track -> "${name.substringBeforeLast("-")} ${artists.first().name}"
-  is LocalTrack -> "${name.substringBeforeLast("-")} ${artists.first().name}"
+  is LocalTrack -> "${name.substringBeforeLast("-")} ${artists.firstOrNull()?.name ?: ""}"
   is Episode -> "$name ${show.name}"
   else -> "I really hope this isn't the title of some obscure song or podcast."
 }

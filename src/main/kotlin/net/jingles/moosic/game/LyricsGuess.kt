@@ -170,8 +170,6 @@ class LyricsGuess(
 
   private fun populateLyricPrompts(client: SpotifyClient): LinkedList<LyricPrompt> {
 
-    val prompts = LinkedList<LyricPrompt>()
-
     val tracks = if (playlist == null) getRandomPlaylistTracks(client, rounds, true)
     else LinkedList(playlist.tracks.toList()
       .filterNotNull()
@@ -180,17 +178,18 @@ class LyricsGuess(
       .mapRandomly(rounds) { this }
     )
 
-    while (prompts.size < rounds) {
+    return LinkedList(tracks.mapRandomly(rounds) {
 
-      val trackInfo = tracks.random().toSimpleTrackInfo()
+      val track = tracks.random()
+      val trackInfo = track.toSimpleTrackInfo()
 
       val title = trackInfo.substringBefore(" ")
       val artists = trackInfo.substringAfter(" ").split(", ")
 
-      val url = search("$title ${artists.getOrElse(0){""}}").firstOrNull {
+      val url = search(track.toSearchQuery()).firstOrNull {
         artists.any { name -> name.equals(it.artist, true) }
           && title.equals(it.title, true)
-      }?.url ?: continue
+      }?.url ?: return@mapRandomly null
 
       val verse = getLyrics(url).random().second.split("\n")
 
@@ -203,12 +202,10 @@ class LyricsGuess(
         .replace(WHITESPACE, " ")
         .replace(answer, blanks).trim()}```"
 
-      prompts.add(LyricPrompt(trackInfo, msg, answer,
-        answer.toLowerCase().filter { c -> c.isLetterOrDigit() }))
+      return@mapRandomly LyricPrompt(trackInfo, msg, answer,
+        answer.toLowerCase().filter { c -> c.isLetterOrDigit() })
 
-    }
-
-    return prompts
+    })
 
   }
 
