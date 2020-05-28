@@ -1,6 +1,7 @@
 package net.jingles.moosic
 
 import com.adamratzman.spotify.models.*
+import net.jingles.moosic.command.CommandException
 import net.jingles.moosic.service.SpotifyClient
 import java.text.NumberFormat
 import java.time.ZonedDateTime
@@ -146,6 +147,10 @@ inline fun <T, Z> Collection<T>.mapRandomly(limit: Int, mapper: T.() -> Z?): Lis
 
     val mappedValue = mapper.invoke(this.random())
     if (mappedValue != null) populatedList.add(mappedValue)
+
+    if (attempt > limit * 2) {
+      throw CommandException("Unable to randomly map within a reasonable amount of attempts.")
+    }
 
   }
 
