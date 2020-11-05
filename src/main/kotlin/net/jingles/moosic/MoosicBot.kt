@@ -6,6 +6,7 @@ import com.adamratzman.spotify.SpotifyCredentials
 import net.dv8tion.jda.api.AccountType
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.hooks.AnnotatedEventManager
+import net.dv8tion.jda.api.requests.GatewayIntent
 import net.jingles.moosic.command.CommandManager
 import net.jingles.moosic.service.UserInfo
 import org.jetbrains.exposed.sql.Database
@@ -38,7 +39,8 @@ open class MoosicBot {
         createSpotifyAPI()
         RedirectServer(port)
 
-        JDABuilder(AccountType.BOT)
+        JDABuilder.create(token, GatewayIntent.DIRECT_MESSAGES, GatewayIntent.GUILD_MESSAGES, GatewayIntent.DIRECT_MESSAGE_REACTIONS,
+          GatewayIntent.GUILD_MESSAGE_REACTIONS, GatewayIntent.GUILD_MEMBERS)
           .setEventManager(AnnotatedEventManager())
           .addEventListeners(CommandManager)
           .setBulkDeleteSplittingEnabled(false)
