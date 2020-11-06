@@ -70,7 +70,7 @@ open class MoosicBot {
 
       val jdbUri = URI(System.getenv("JAWSDB_URL"))
       val port = jdbUri.port.toString()
-      val url = "jdbc:mysql://${jdbUri.host}:$port${jdbUri.path}"
+      val url = "jdbc:mysql://${jdbUri.host}:$port${jdbUri.path}?useSSL=false"
 
       val username = jdbUri.userInfo.split(":").toTypedArray()[0]
       val password = jdbUri.userInfo.split(":").toTypedArray()[1]
