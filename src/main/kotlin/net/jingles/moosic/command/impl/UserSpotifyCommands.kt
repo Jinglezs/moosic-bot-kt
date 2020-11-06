@@ -87,8 +87,8 @@ class FavoritesCommand : Command() {
 
     val name = context.arguments.joinToString(" ")
 
-    val user = context.event.jda.getUsersByName(name, true).firstOrNull()
-      ?: throw CommandException("A user by the name of \"$name\" could not be found.")
+    val user = context.event.message.mentionedUsers.firstOrNull()
+      ?: throw CommandException("You must mention the target user.")
 
     val spotify = getSpotifyClient(user.idLong)
       ?: throw CommandException("${user.name} has not authenticated MoosicBot for Spotify interactions >:V")
@@ -222,9 +222,9 @@ class StalkCommand : Command() {
 
     val name = context.arguments.pollFirst()
 
-    val spotify = context.event.jda.getUsersByName(name, true)
+    val spotify = context.event.message.mentionedUsers
       .mapNotNull { getSpotifyClient(it.idLong)?.clientAPI }.firstOrNull()
-      ?: throw CommandException("An authenticated user by that name could not be found >:V")
+      ?: throw CommandException("You must mention an authenticated user! >:V")
 
     val pagingObject = spotify.player.getRecentlyPlayed(limit = 10).complete().getAll()
       .complete().flatten().filterNotNull().toList()
