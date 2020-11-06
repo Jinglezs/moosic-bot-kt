@@ -110,7 +110,7 @@ class SongGuess(
 
         with(it.clientAPI.player) {
           startPlayback(tracksToPlay = tracksToPlay).complete() // Play the track
-          seek(seekPosition.toLong()).queue().complete() // Skip to a random position
+          seek(seekPosition.toLong()).complete() // Skip to a random position
         }
 
       }
